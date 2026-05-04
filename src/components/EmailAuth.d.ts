@@ -1,0 +1,1 @@
+export function EmailAuth(): JSX.Element
