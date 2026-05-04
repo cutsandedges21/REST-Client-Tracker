@@ -224,8 +224,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
                   : 'border-slate-200 bg-white'
                   } ${isToday && !isSelected ? 'ring-1 ring-[var(--color-primary)]' : ''}`}
                 style={isSelected ? {
-                  backgroundColor: `rgba(var(--color-primary-light), 0.5)`,
-                  ringColor: `rgba(var(--color-primary-light), 0.5)`
+                  backgroundColor: `rgba(var(--color-primary-light), 0.5)`
                 } : {}}
               >
                 <span className="text-xs font-semibold text-slate-800">{parseDateKey(dayKey).getDate()}</span>

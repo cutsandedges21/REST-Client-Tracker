@@ -1,4 +1,3 @@
-import { type ReactNode } from 'react'
 import { colorThemes, type ColorTheme } from '../lib/colorThemes'
 
 interface ColorThemeSelectorProps {

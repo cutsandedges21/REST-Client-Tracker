@@ -28,8 +28,8 @@ function App() {
   const [colorTheme, setColorTheme] = useState<ColorTheme>('purple')
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [oneTimeTasks, setOneTimeTasks] = useState([])
-  const [expenses, setExpenses] = useState([])
+  const [oneTimeTasks, setOneTimeTasks] = useState<Array<{ amount: number; timeSpent: number }>>([])
+  const [expenses] = useState<Array<{ amount: number }>>([])
 
   const {
     clients,
@@ -119,8 +119,8 @@ function App() {
     }
   }, [filteredClients, oneTimeTasks, expenses])
 
-  const getMonthlyEarnings = (client) => {
-    const frequencyMultipliers = {
+  const getMonthlyEarnings = (client: Client) => {
+    const frequencyMultipliers: Record<string, number> = {
       weekly: 4.33,
       biweekly: 2.17,
       three_weeks: 1.45,
@@ -129,8 +129,8 @@ function App() {
     return client.perCutRate * (frequencyMultipliers[client.serviceFrequency] || 1)
   }
 
-  const getMonthlyTime = (client) => {
-    const frequencyMultipliers = {
+  const getMonthlyTime = (client: Client) => {
+    const frequencyMultipliers: Record<string, number> = {
       weekly: 4.33,
       biweekly: 2.17,
       three_weeks: 1.45,
