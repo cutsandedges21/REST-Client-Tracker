@@ -138,7 +138,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
     }
     const result = await onAdd({ clientId, date: selectedDate, time: resolvedAddTime })
     if (!result.ok) {
-      toast.error(result.reason)
+      toast.error((result as { ok: false; reason: string }).reason)
       return
     }
     toast.success('Appointment Scheduled Successfully')
@@ -154,7 +154,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
       time,
     })
     if (!result.ok) {
-      toast.error(result.reason)
+      toast.error((result as { ok: false; reason: string }).reason)
       return
     }
     toast.success('Appointment Updated Successfully')

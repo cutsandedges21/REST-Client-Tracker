@@ -162,76 +162,75 @@ function App() {
   return (
     <main className="min-h-screen px-4 py-8 text-slate-900 transition-colors md:px-8" style={{ background: `linear-gradient(to bottom, var(--color-primary-light), white, white)` }}>
       <Toaster richColors position="top-right" />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <GlowCard>
-          <header className="flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center md:p-6">
-            <div>
-              <p className="text-sm font-medium" style={{ color: `var(--color-primary-dark)` }}>REST Client Tracker: Keep track of your business</p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl" style={{ color: `rgb(var(--color-primary-dark))` }}>
-                Revenue
-                <br></br>
-                Email
-                <br></br>
-                Schedule
-                <br></br>
-                Track
-              </h1>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <ColorThemeSelector currentTheme={colorTheme} onThemeChange={setColorTheme} />
-              <button
-                type="button"
-                onClick={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
-                className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium transition hover:bg-slate-100"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-              </button>
-            </div>
-          </header>
-        </GlowCard>
 
-        <AllTimeStats {...allTimeStats} />
+      {!isLoaded ? (
+        <div className="flex min-h-screen items-center justify-center">
+          <p className="text-slate-600 text-sm animate-pulse">Loading your data...</p>
+        </div>
+      ) : (
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+          <GlowCard>
+            <header className="flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center md:p-6">
+              <div>
+                <p className="text-sm font-medium" style={{ color: `var(--color-primary-dark)` }}>REST Client Tracker: Keep track of your business</p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl" style={{ color: `rgb(var(--color-primary-dark))` }}>
+                  Revenue
+                  <br></br>
+                  Email
+                  <br></br>
+                  Schedule
+                  <br></br>
+                  Track
+                </h1>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <ColorThemeSelector currentTheme={colorTheme} onThemeChange={setColorTheme} />
+                <button
+                  type="button"
+                  onClick={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
+                  className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium transition hover:bg-slate-100"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </button>
+              </div>
+            </header>
+          </GlowCard>
 
-        <DashboardStats {...metrics} />
+          <AllTimeStats {...allTimeStats} />
+          <DashboardStats {...metrics} />
+          <OneTimeTasks onTasksChange={setOneTimeTasks} />
+          <EmailSettings />
+          <EmailAuth />
+          <EmailPreview clients={filteredClients} appointments={appointments} />
+          <ClientForm onSubmit={addClient} />
 
-        <OneTimeTasks onTasksChange={setOneTimeTasks} />
-
-        <EmailSettings />
-
-        <EmailAuth />
-
-        <EmailPreview clients={filteredClients} appointments={appointments} />
-
-        <ClientForm onSubmit={addClient} />
-
-        <GlowCard>
-          <div className="p-4 md:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <label className="relative block sm:max-w-sm sm:flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
-                  placeholder="Search by name, phone, email, or address..."
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
-              </label>
-              <div className="inline-flex rounded-xl border border-slate-300 p-1">
-                <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
-                  Cards
-                </ToggleButton>
-                <ToggleButton active={viewMode === 'table'} onClick={() => setViewMode('table')}>
-                  Table
-                </ToggleButton>
+          <GlowCard>
+            <div className="p-4 md:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="relative block sm:max-w-sm sm:flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                    placeholder="Search by name, phone, email, or address..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                  />
+                </label>
+                <div className="inline-flex rounded-xl border border-slate-300 p-1">
+                  <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
+                    Cards
+                  </ToggleButton>
+                  <ToggleButton active={viewMode === 'table'} onClick={() => setViewMode('table')}>
+                    Table
+                  </ToggleButton>
+                </div>
               </div>
             </div>
-          </div>
-        </GlowCard>
+          </GlowCard>
 
-        <AnimatePresence mode="wait">
-          {isLoaded ? (
+          <AnimatePresence mode="wait">
             <motion.div
               key={viewMode}
               initial={{ opacity: 0, y: 10 }}
@@ -246,28 +245,18 @@ function App() {
                 onEdit={setEditingClient}
               />
             </motion.div>
-          ) : (
-            <GlowCard key="loading">
-              <div className="p-4">
-                <p className="text-sm text-slate-600">Loading client data...</p>
-              </div>
-            </GlowCard>
-          )}
-        </AnimatePresence>
+          </AnimatePresence>
 
-        {isLoaded ? (
-          <>
-            <EarningsChart clients={filteredClients} />
-            <ScheduleCalendar
-              clients={filteredClients}
-              appointments={appointments}
-              onAdd={(input) => addAppointment(input)}
-              onUpdate={(id, input) => updateAppointment(id, input)}
-              onRemove={(id) => void removeAppointment(id)}
-            />
-          </>
-        ) : null}
-      </div>
+          <EarningsChart clients={filteredClients} />
+          <ScheduleCalendar
+            clients={filteredClients}
+            appointments={appointments}
+            onAdd={(input) => addAppointment(input)}
+            onUpdate={(id, input) => updateAppointment(id, input)}
+            onRemove={(id) => void removeAppointment(id)}
+          />
+        </div>
+      )}
 
       <DeleteConfirmDialog
         open={Boolean(pendingDelete)}
