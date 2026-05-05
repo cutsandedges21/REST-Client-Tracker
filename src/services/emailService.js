@@ -18,10 +18,19 @@ export class EmailService {
       const savedConfig = localStorage.getItem('emailjsConfig')
       if (savedConfig) {
         this.config = JSON.parse(savedConfig)
+      } else {
+        this.config = null
       }
     } catch (error) {
       console.error('Error loading EmailJS config:', error)
+      this.config = null
     }
+  }
+
+  getConfig() {
+    // Always reload from localStorage to get the latest config
+    this.loadConfig()
+    return this.config
   }
 
   getSubject(type) {
@@ -69,12 +78,20 @@ export class EmailService {
   }
 
   async sendEmail(data) {
-    if (!this.config) {
+    const config = this.getConfig()
+    console.log('[EmailService] Config loaded:', config)
+    console.log('[EmailService] Data:', data)
+
+    if (!config) {
+      console.error('[EmailService] No config found')
       return { success: false, error: 'EmailJS not configured. Please configure it in the Email Settings.' }
     }
 
     const userEmail = this.getUserEmail()
+    console.log('[EmailService] User email:', userEmail)
+
     if (!userEmail) {
+      console.error('[EmailService] No user email found')
       return { success: false, error: 'No user email configured. Please set your email in Email Settings.' }
     }
 
@@ -82,26 +99,48 @@ export class EmailService {
       const subject = this.getSubject(data.type)
       const body = this.generateEmailBody(data)
 
-      await emailjs.send(
-        this.config.serviceId,
-        this.config.templateId,
+      // Use specific template for client edit, or fall back to default template
+      let templateId = config.templateId
+      if (data.type === 'clientEdit' && config.clientEditTemplateId) {
+        templateId = config.clientEditTemplateId
+      }
+
+      console.log('[EmailService] Sending email with:', {
+        serviceId: config.serviceId,
+        templateId: templateId,
+        publicKey: config.publicKey,
+        toEmail: userEmail,
+        subject,
+        emailType: data.type,
+      })
+
+      const result = await emailjs.send(
+        config.serviceId,
+        templateId,
         {
           to_email: userEmail,
+          to_name: userEmail.split('@')[0],
           subject: subject,
           message: body,
           client_name: data.client.fullName,
           client_phone: data.client.phone || 'N/A',
           client_address: data.client.address || 'N/A',
           appointment_time: data.appointment?.time || 'N/A',
+          appointment_date: data.appointment?.date || 'N/A',
         },
-        this.config.publicKey
+        config.publicKey
       )
 
-      console.log('Email sent successfully to:', userEmail)
+      console.log('Email sent successfully to:', userEmail, 'Result:', result)
       return { success: true }
     } catch (error) {
       console.error('Error sending email:', error)
-      return { success: false, error: error.message || 'Failed to send email' }
+      console.error('Error details:', {
+        status: error.status,
+        text: error.text,
+        message: error.message
+      })
+      return { success: false, error: error.text || error.message || 'Failed to send email' }
     }
   }
 
@@ -110,7 +149,8 @@ export class EmailService {
   }
 
   isConfigured() {
-    return !!this.config && !!this.config.publicKey && !!this.config.serviceId && !!this.config.templateId
+    const config = this.getConfig()
+    return !!config && !!config.publicKey && !!config.serviceId && !!config.templateId
   }
 }
 

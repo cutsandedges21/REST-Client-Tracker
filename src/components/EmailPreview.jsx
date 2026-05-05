@@ -7,7 +7,7 @@ import { emailService } from '../services/emailService.js'
 export function EmailPreview({ clients, appointments }) {
   const [selectedClient, setSelectedClient] = useState('')
   const [selectedAppointment, setSelectedAppointment] = useState('')
-  const [emailType, setEmailType] = useState('reminder')
+  const [emailType, setEmailType] = useState('newClient')
   const [isSending, setIsSending] = useState(false)
   const [sendResult, setSendResult] = useState(null)
 
@@ -60,7 +60,6 @@ export function EmailPreview({ clients, appointments }) {
               value={emailType}
               onChange={(e) => setEmailType(e.target.value)}
             >
-              <option value="reminder">Reminder (30 minutes)</option>
               <option value="newClient">New Client Added</option>
               <option value="clientEdit">Client Updated</option>
             </select>
@@ -82,26 +81,6 @@ export function EmailPreview({ clients, appointments }) {
             </select>
           </label>
 
-          {emailType === 'reminder' && (
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Select Appointment</span>
-              <select
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
-                value={selectedAppointment}
-                onChange={(e) => setSelectedAppointment(e.target.value)}
-              >
-                <option value="">Choose an appointment...</option>
-                {appointments
-                  .filter(a => a.clientId === selectedClient)
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.date} at {a.time}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
-
           {client && (
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div dangerouslySetInnerHTML={{
@@ -121,9 +100,9 @@ export function EmailPreview({ clients, appointments }) {
               onClick={handleSendTestEmail}
               disabled={isSending}
               className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70"
-              style={{ backgroundColor: `var(--color-primary)` }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+              style={{ backgroundColor: `rgb(var(--color-primary))` }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
             >
               {isSending ? 'Sending...' : 'Send Test Email'}
             </button>

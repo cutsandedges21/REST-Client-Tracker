@@ -6,6 +6,7 @@ export function EmailAuth() {
   const [publicKey, setPublicKey] = useState('')
   const [serviceId, setServiceId] = useState('')
   const [templateId, setTemplateId] = useState('')
+  const [clientEditTemplateId, setClientEditTemplateId] = useState('')
 
   useEffect(() => {
     const savedConfig = localStorage.getItem('emailjsConfig')
@@ -15,6 +16,7 @@ export function EmailAuth() {
         setPublicKey(config.publicKey || '')
         setServiceId(config.serviceId || '')
         setTemplateId(config.templateId || '')
+        setClientEditTemplateId(config.clientEditTemplateId || '')
         setIsAuthenticated(!!config.publicKey && !!config.serviceId && !!config.templateId)
       } catch (error) {
         console.error('Error parsing EmailJS config:', error)
@@ -24,12 +26,12 @@ export function EmailAuth() {
 
   const handleSave = () => {
     if (publicKey && serviceId && templateId) {
-      const config = { publicKey, serviceId, templateId }
+      const config = { publicKey, serviceId, templateId, clientEditTemplateId }
       localStorage.setItem('emailjsConfig', JSON.stringify(config))
       setIsAuthenticated(true)
       alert('EmailJS configured successfully!')
     } else {
-      alert('Please fill in all fields')
+      alert('Please fill in all required fields')
     }
   }
 
@@ -38,6 +40,7 @@ export function EmailAuth() {
     setPublicKey('')
     setServiceId('')
     setTemplateId('')
+    setClientEditTemplateId('')
     setIsAuthenticated(false)
     alert('Configuration cleared')
   }
@@ -47,7 +50,7 @@ export function EmailAuth() {
       <div className="p-5 md:p-6">
         <h2 className="text-xl font-semibold tracking-tight" style={{ color: `rgb(var(--color-primary-dark))` }}>Email Configuration</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Configure EmailJS to send email notifications (simpler than Gmail OAuth).
+          Configure <a href="https://www.emailjs.com/" target="_blank" rel="noopener noreferrer" style={{ color: `rgb(var(--color-primary))` }}>EmailJS</a> to recieve confirmation emails.
         </p>
 
         <div className="mt-5 space-y-4">
@@ -62,6 +65,9 @@ export function EmailAuth() {
             />
           </label>
 
+          <br></br>
+          <br></br>
+
           <label className="space-y-1.5">
             <span className="text-sm font-medium text-slate-700">Service ID</span>
             <input
@@ -73,8 +79,11 @@ export function EmailAuth() {
             />
           </label>
 
+          <br></br>
+          <br></br>
+
           <label className="space-y-1.5">
-            <span className="text-sm font-medium text-slate-700">Template ID</span>
+            <span className="text-sm font-medium text-slate-700">Template ID (for client notifications)</span>
             <input
               type="text"
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
@@ -82,6 +91,23 @@ export function EmailAuth() {
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
             />
+          </label>
+
+          <br></br>
+          <br></br>
+
+          <label className="space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">Client Edit Template ID (optional - for client updates)</span>
+            <input
+              type="text"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+              placeholder="Your client edit template ID (optional)"
+              value={clientEditTemplateId}
+              onChange={(e) => setClientEditTemplateId(e.target.value)}
+            />
+            <br></br>
+            <br></br>
+
           </label>
 
           {isAuthenticated && (
@@ -94,9 +120,9 @@ export function EmailAuth() {
             <button
               onClick={handleSave}
               className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition"
-              style={{ backgroundColor: `var(--color-primary)` }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+              style={{ backgroundColor: `rgb(var(--color-primary))` }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
             >
               Save Configuration
             </button>

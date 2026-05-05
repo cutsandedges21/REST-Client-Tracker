@@ -170,7 +170,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
   return (
     <GlowCard>
       <div className="p-4 md:p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Schedule</h2>
+        <h2 className="text-lg font-semibold text-slate-900" style={{ color: `rgb(var(--color-primary-dark))` }}>Schedule</h2>
         <p className="mt-1 text-sm text-slate-600">
           Each day/time can only be booked once. Tap a day, pick a free slot, then add. Edit or remove mistakes below.
         </p>
@@ -227,7 +227,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
                   backgroundColor: `rgba(var(--color-primary-light), 0.5)`
                 } : {}}
               >
-                <span className="text-xs font-semibold text-slate-800">{parseDateKey(dayKey).getDate()}</span>
+                <span className="text-xs font-semibold" style={{ color: `rgb(var(--color-primary-dark))` }}>{parseDateKey(dayKey).getDate()}</span>
                 <div className="mt-1 flex flex-1 flex-col gap-0.5 overflow-hidden">
                   {slots.slice(0, 2).map((s) => (
                     <span
@@ -313,9 +313,9 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
                   type="button"
                   onClick={() => void handleSaveEdit()}
                   className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition"
-                  style={{ backgroundColor: `var(--color-primary)` }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+                  style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
                 >
                   Save changes
                 </button>
@@ -370,9 +370,9 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
                     disabled={!clientId || availableForAdd.length === 0}
                     onClick={() => void handleAdd()}
                     className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
-                    style={{ backgroundColor: `var(--color-primary)` }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+                    style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
                   >
                     Add to schedule
                   </button>

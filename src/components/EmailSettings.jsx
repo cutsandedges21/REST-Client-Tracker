@@ -35,10 +35,10 @@ export function EmailSettings() {
       <div className="p-5 md:p-6">
         <h2 className="text-xl font-semibold tracking-tight" style={{ color: `rgb(var(--color-primary-dark))` }}>Email Settings</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Configure your email address to receive client notifications and reminders.
+          Configure your email address to receive confirmation emails.
         </p>
-
-
+        <p className="mt-1 text-sm text-slate-600">Must set up <a href="https://www.emailjs.com/" target="_blank" rel="noopener noreferrer" style={{ color: `rgb(var(--color-primary))` }}>EmailJS</a> to recieve email notifications.</p>
+        <p>MUST CONFIGURE BELOW</p>
         <div className="mt-5 space-y-4">
           <label className="space-y-1.5">
             <span className="text-sm font-medium text-slate-700">Your Email Address</span>
@@ -65,9 +65,9 @@ export function EmailSettings() {
             <button
               onClick={handleSave}
               className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition"
-              style={{ backgroundColor: `var(--color-primary)` }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+              style={{ backgroundColor: `rgb(var(--color-primary))` }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
             >
               Save Email
             </button>

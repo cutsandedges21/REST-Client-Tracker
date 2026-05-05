@@ -140,9 +140,9 @@ export function ClientEditDialog({ client, open, onClose, onSave }: ClientEditDi
                       type="submit"
                       disabled={isSubmitting}
                       className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-60"
-                      style={{ backgroundColor: `var(--color-primary)` }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+                      style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
                     >
                       {isSubmitting ? 'Saving…' : 'Save changes'}
                     </button>

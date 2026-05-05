@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { clientSchema, type ClientSchema } from '../lib/validation'
@@ -7,13 +8,18 @@ import { cn } from '../lib/utils'
 import { GlowCard } from './GlowCard'
 
 interface ClientFormProps {
-  onSubmit: (values: ClientSchema) => Promise<void>
+  onSubmit: (values: ClientSchema) => Promise<string>
+  onSchedule?: (clientId: string, date: string, time: string) => Promise<void>
 }
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]'
 
-export function ClientForm({ onSubmit }: ClientFormProps) {
+export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
+  const [timeUnit, setTimeUnit] = useState<'minutes' | 'hours'>('minutes')
+  const [scheduleClient, setScheduleClient] = useState(false)
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleTime, setScheduleTime] = useState('')
   const {
     register,
     handleSubmit,
@@ -30,13 +36,35 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
   })
 
   const submit = async (values: ClientSchema) => {
-    await onSubmit(values)
-    reset({
-      lawnSizeCategory: 'medium',
-      serviceFrequency: 'weekly',
-      phone: '',
-      email: '',
-    })
+    console.log('[DEBUG] ClientForm submit called with values:', values)
+    try {
+      // Convert hours to minutes if needed
+      const processedValues = {
+        ...values,
+        cutDurationMinutes: timeUnit === 'hours' ? values.cutDurationMinutes * 60 : values.cutDurationMinutes,
+      }
+      const clientId = await onSubmit(processedValues)
+      console.log('[DEBUG] ClientForm submit completed successfully, clientId:', clientId)
+
+      // Schedule the client if option is selected
+      if (scheduleClient && onSchedule && scheduleDate && scheduleTime && clientId) {
+        console.log('[DEBUG] Scheduling client for:', scheduleDate, scheduleTime)
+        await onSchedule(clientId, scheduleDate, scheduleTime)
+      }
+
+      reset({
+        lawnSizeCategory: 'medium',
+        serviceFrequency: 'weekly',
+        phone: '',
+        email: '',
+      })
+      setScheduleClient(false)
+      setScheduleDate('')
+      setScheduleTime('')
+    } catch (error) {
+      console.error('[ERROR] ClientForm submit failed:', error)
+      throw error
+    }
   }
 
   return (
@@ -50,7 +78,7 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
 
           <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(submit)}>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Full Name</span>
+              <span className="text-sm font-medium text-slate-700">Full Name *</span>
               <input className={inputClass} placeholder="Mossimo Bianco" {...register('fullName')} />
               <FieldError error={errors.fullName?.message} />
             </label>
@@ -68,19 +96,19 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Address</span>
+              <span className="text-sm font-medium text-slate-700">Address *</span>
               <input className={inputClass} placeholder="123 Main St" {...register('address')} />
               <FieldError error={errors.address?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Rate Per Visit (CAD)</span>
+              <span className="text-sm font-medium text-slate-700">Rate Per Visit (CAD) *</span>
               <input type="number" min={0} step="0.01" className={inputClass} {...register('perCutRate')} />
               <FieldError error={errors.perCutRate?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Lawn Size</span>
+              <span className="text-sm font-medium text-slate-700">Job Size *</span>
               <select className={inputClass} {...register('lawnSizeCategory')}>
                 <option value="small">Small</option>
                 <option value="medium">Medium</option>
@@ -90,7 +118,7 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Service Frequency</span>
+              <span className="text-sm font-medium text-slate-700">Service Frequency *</span>
               <select className={inputClass} {...register('serviceFrequency')}>
                 <option value="weekly">Weekly</option>
                 <option value="biweekly">Bi-weekly</option>
@@ -101,8 +129,25 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Service Duration (minutes)</span>
-              <input type="number" min={1} className={inputClass} {...register('cutDurationMinutes')} />
+              <span className="text-sm font-medium text-slate-700">Service Duration *</span>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className={inputClass}
+                  placeholder={timeUnit === 'hours' ? '1.5' : '90'}
+                  {...register('cutDurationMinutes', { valueAsNumber: true })}
+                />
+                <select
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                  value={timeUnit}
+                  onChange={(e) => setTimeUnit(e.target.value as 'minutes' | 'hours')}
+                >
+                  <option value="minutes">Minutes</option>
+                  <option value="hours">Hours</option>
+                </select>
+              </div>
               <FieldError error={errors.cutDurationMinutes?.message} />
             </label>
 
@@ -117,14 +162,84 @@ export function ClientForm({ onSubmit }: ClientFormProps) {
               <FieldError error={errors.notes?.message} />
             </label>
 
+            <div className="md:col-span-2 space-y-4 rounded-lg border border-slate-200 bg-slate-0 p-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={scheduleClient}
+                  onChange={(e) => setScheduleClient(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                />
+                <span className="text-sm font-medium text-slate-700">Schedule first appointment</span>
+              </label>
+
+              {scheduleClient && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-1.5">
+                    <span className="text-sm font-medium text-slate-700">Date</span>
+                    <input
+                      type="date"
+                      className={inputClass}
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </label>
+
+                  <label className="space-y-1.5">
+                    <span className="text-sm font-medium text-slate-700">Time</span>
+                    <select
+                      className={inputClass}
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                    >
+                      <option value="">Select time...</option>
+                      <option value="08:00">8:00 AM</option>
+                      <option value="08:30">8:30 AM</option>
+                      <option value="09:00">9:00 AM</option>
+                      <option value="09:30">9:30 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="10:30">10:30 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="11:30">11:30 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="12:30">12:30 PM</option>
+                      <option value="13:00">1:00 PM</option>
+                      <option value="13:30">1:30 PM</option>
+                      <option value="14:00">2:00 PM</option>
+                      <option value="14:30">2:30 PM</option>
+                      <option value="15:00">3:00 PM</option>
+                      <option value="15:30">3:30 PM</option>
+                      <option value="16:00">4:00 PM</option>
+                      <option value="16:30">4:30 PM</option>
+                      <option value="17:00">5:00 PM</option>
+                      <option value="17:30">5:30 PM</option>
+                      <option value="18:00">6:00 PM</option>
+                      <option value="18:30">6:30 PM</option>
+                      <option value="19:00">7:00 PM</option>
+                      <option value="19:30">7:30 PM</option>
+                      <option value="20:00">8:00 PM</option>
+                      <option value="20:30">8:30 PM</option>
+                      <option value="21:00">9:00 PM</option>
+                      <option value="21:30">9:30 PM</option>
+                      <option value="22:00">10:00 PM</option>
+                      <option value="22:30">10:30 PM</option>
+                      <option value="23:00">11:00 PM</option>
+                      <option value="23:30">11:30 PM</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
+
             <div className="md:col-span-2">
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70"
-                style={{ backgroundColor: `var(--color-primary)` }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary-dark)`}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `var(--color-primary)`}
+                style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
               >
                 {isSubmitting ? 'Saving...' : 'Add Client'}
               </button>

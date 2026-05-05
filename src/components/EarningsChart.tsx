@@ -33,9 +33,9 @@ export function EarningsChart({ clients }: EarningsChartProps) {
       <div className="p-4 md:p-5">
         <h2 className="text-lg font-semibold text-slate-900">Monthly revenue (estimated)</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Each bar is <span className="font-medium text-slate-800">per-cut rate × visits per month</span>. Total monthly estimate:{' '}
-          <span className="font-medium text-slate-800">{formatCurrency(metrics.totalMonthlyRevenue)}</span>
-          {' · '}
+          Each bar is <span className="font-medium" style={{ color: `rgb(var(--color-primary-dark))` }}>rate × visits per month</span> • Total monthly estimate:{' '}
+          <span className="font-medium" style={{ color: `rgb(var(--color-primary-dark))` }}>{formatCurrency(metrics.totalMonthlyRevenue)}</span>
+          {' • '}
           {metrics.totalClients} client{metrics.totalClients !== 1 ? 's' : ''}
         </p>
         <div className="mt-4 h-80 w-full min-h-[16rem]">
@@ -49,7 +49,7 @@ export function EarningsChart({ clients }: EarningsChartProps) {
                 labelStyle={{ color: '#0f172a' }}
                 contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }}
               />
-              <Bar dataKey="monthly" name="Est. monthly (CAD)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="monthly" name="Est. monthly (CAD)" fill="rgb(var(--color-primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

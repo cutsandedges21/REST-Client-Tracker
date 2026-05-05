@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import React, { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Moon, Search, Sun } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -11,7 +11,6 @@ import { EarningsChart } from './components/EarningsChart'
 import { GlowCard } from './components/GlowCard'
 import { ScheduleCalendar } from './components/ScheduleCalendar'
 import { EmailSettings } from './components/EmailSettings'
-import { EmailPreview } from './components/EmailPreview'
 import { EmailAuth } from './components/EmailAuth'
 import { OneTimeTasks } from './components/OneTimeTasks'
 import { AllTimeStats } from './components/AllTimeStats'
@@ -23,13 +22,58 @@ import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
 
+class ErrorBoundary extends React.Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    console.error('[ERROR BOUNDARY] Caught error:', error)
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[ERROR BOUNDARY] Error details:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-red-50 p-4">
+          <div className="max-w-md rounded-lg border border-red-200 bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold text-red-800">Something went wrong</h2>
+            <p className="mb-4 text-sm text-red-600">
+              The application encountered an error. Please check the browser console for details.
+            </p>
+            <p className="mb-4 text-xs font-mono text-red-700">
+              Error: {this.state.error?.message || 'Unknown error'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
 function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [colorTheme, setColorTheme] = useState<ColorTheme>('purple')
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [oneTimeTasks, setOneTimeTasks] = useState<Array<{ amount: number; timeSpent: number }>>([])
-  const [expenses] = useState<Array<{ amount: number }>>([])
+  const [expenses, setExpenses] = useState<Array<{ amount: number }>>([])
 
   const {
     clients,
@@ -50,7 +94,16 @@ function App() {
   } = useClientStore()
 
   useEffect(() => {
-    void initialize()
+    console.log('[DEBUG] App useEffect - calling initialize')
+    const init = async () => {
+      try {
+        await initialize()
+        console.log('[DEBUG] App useEffect - initialize completed')
+      } catch (error) {
+        console.error('[ERROR] App useEffect - initialize failed:', error)
+      }
+    }
+    void init()
   }, [initialize])
 
   useEffect(() => {
@@ -92,6 +145,26 @@ function App() {
 
   const metrics = useMemo(() => getDashboardMetrics(filteredClients), [filteredClients])
 
+  const getMonthlyEarnings = (client: Client) => {
+    const frequencyMultipliers: Record<string, number> = {
+      weekly: 4.33,
+      biweekly: 2.17,
+      three_weeks: 1.45,
+      monthly: 1
+    }
+    return client.perCutRate * (frequencyMultipliers[client.serviceFrequency] || 1)
+  }
+
+  const getMonthlyTime = (client: Client) => {
+    const frequencyMultipliers: Record<string, number> = {
+      weekly: 4.33,
+      biweekly: 2.17,
+      three_weeks: 1.45,
+      monthly: 1
+    }
+    return client.cutDurationMinutes * (frequencyMultipliers[client.serviceFrequency] || 1)
+  }
+
   // Calculate all-time totals
   const allTimeStats = useMemo(() => {
     const regularEarnings = filteredClients.reduce((sum, client) => {
@@ -118,26 +191,6 @@ function App() {
       totalExpenses
     }
   }, [filteredClients, oneTimeTasks, expenses])
-
-  const getMonthlyEarnings = (client: Client) => {
-    const frequencyMultipliers: Record<string, number> = {
-      weekly: 4.33,
-      biweekly: 2.17,
-      three_weeks: 1.45,
-      monthly: 1
-    }
-    return client.perCutRate * (frequencyMultipliers[client.serviceFrequency] || 1)
-  }
-
-  const getMonthlyTime = (client: Client) => {
-    const frequencyMultipliers: Record<string, number> = {
-      weekly: 4.33,
-      biweekly: 2.17,
-      three_weeks: 1.45,
-      monthly: 1
-    }
-    return client.cutDurationMinutes * (frequencyMultipliers[client.serviceFrequency] || 1)
-  }
 
   const onRemove = async () => {
     if (!pendingDelete) return
@@ -200,10 +253,9 @@ function App() {
 
           <AllTimeStats {...allTimeStats} />
           <DashboardStats {...metrics} />
-          <OneTimeTasks onTasksChange={setOneTimeTasks} />
+          <OneTimeTasks onTasksChange={setOneTimeTasks} onExpensesChange={setExpenses} />
           <EmailSettings />
           <EmailAuth />
-          <EmailPreview clients={filteredClients} appointments={appointments} />
           <ClientForm onSubmit={addClient} />
 
           <GlowCard>
@@ -297,4 +349,10 @@ function ToggleButton({
   )
 }
 
-export default App
+export default function AppWrapper() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  )
+}

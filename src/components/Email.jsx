@@ -23,8 +23,8 @@ export function Email({ type, client, appointment }) {
       backgroundColor: '#f8f9fa'
     }}>
       <div style={{
-        backgroundColor: '#7c3aed',
-        color: 'white',
+        backgroundColor: 'var(--color-primary, #7c3aed)',
+        color: 'var(--email-text-color, white)',
         padding: '20px',
         borderRadius: '8px',
         marginBottom: '20px'
@@ -37,9 +37,10 @@ export function Email({ type, client, appointment }) {
           backgroundColor: 'white',
           padding: '20px',
           borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          color: 'var(--email-body-color, #0f172a)'
         }}>
-          <h2 style={{ color: '#7c3aed', marginTop: 0 }}>Client Details</h2>
+          <h2 style={{ color: 'var(--color-primary, #7c3aed)', marginTop: 0 }}>Client Details</h2>
           <p><strong>Name:</strong> {client.fullName}</p>
           {client.phone && <p><strong>Phone:</strong> {client.phone}</p>}
           {client.email && <p><strong>Email:</strong> {client.email}</p>}
@@ -57,9 +58,10 @@ export function Email({ type, client, appointment }) {
           padding: '20px',
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          marginTop: '20px'
+          marginTop: '20px',
+          color: 'var(--email-body-color, #0f172a)'
         }}>
-          <h2 style={{ color: '#7c3aed', marginTop: 0 }}>Appointment Details</h2>
+          <h2 style={{ color: 'var(--color-primary, #7c3aed)', marginTop: 0 }}>Appointment Details</h2>
           <p><strong>Date:</strong> {appointment.date}</p>
           <p><strong>Time:</strong> {appointment.time}</p>
         </div>

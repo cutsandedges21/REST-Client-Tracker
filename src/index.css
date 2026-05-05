@@ -72,6 +72,28 @@ body {
   background: linear-gradient(to bottom, #09090b, #0f172a);
 }
 
+/* Light mode text color reset */
+[data-theme='light'] .text-slate-900 {
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .text-slate-700,
+[data-theme='light'] .text-slate-600,
+[data-theme='light'] .text-slate-500 {
+  color: #334155 !important;
+}
+
+/* Email preview text colors */
+[data-theme='light'] {
+  --email-text-color: white;
+  --email-body-color: #0f172a;
+}
+
+[data-theme='dark'] {
+  --email-text-color: white;
+  --email-body-color: #f8fafc;
+}
+
 .glass-card {
   border: 1px solid rgba(226, 232, 240, 0.8);
   background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.92));
