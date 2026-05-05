@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
+import type { Client, ClientFormInput, ScheduledSlot, LawnSizeCategory, ServiceFrequency } from '../types/client'
 import { db } from './db'
 import { emailService } from '../services/emailService.js'
 
@@ -14,19 +14,19 @@ function legacyPerCut(raw: Record<string, unknown>): number {
 
 function normalizeClient(raw: Record<string, unknown>): Client {
   console.log('[DEBUG] normalizeClient called with raw:', raw)
-  const lawnSizeCategory =
+  const lawnSizeCategory: LawnSizeCategory =
     raw.lawnSizeCategory === 'small' || raw.lawnSizeCategory === 'medium' || raw.lawnSizeCategory === 'large'
-      ? raw.lawnSizeCategory
+      ? raw.lawnSizeCategory as LawnSizeCategory
       : 'medium'
-  const serviceFrequency =
+  const serviceFrequency: ServiceFrequency =
     raw.serviceFrequency === 'weekly' ||
     raw.serviceFrequency === 'biweekly' ||
     raw.serviceFrequency === 'three_weeks' ||
     raw.serviceFrequency === 'monthly'
-      ? raw.serviceFrequency
+      ? raw.serviceFrequency as ServiceFrequency
       : 'weekly'
 
-  const client = {
+  const client: Client = {
     id: String(raw.id),
     fullName: String(raw.fullName ?? ''),
     phone: String(raw.phone ?? '').trim(),
@@ -51,7 +51,7 @@ interface ClientState {
   searchTerm: string
   viewMode: ViewMode
   initialize: () => Promise<void>
-  addClient: (data: ClientFormInput) => Promise<void>
+  addClient: (data: ClientFormInput) => Promise<string>
   updateClient: (id: string, data: ClientFormInput) => Promise<void>
   removeClient: (id: string) => Promise<Client | undefined>
   restoreClient: (client: Client) => Promise<void>
@@ -114,9 +114,10 @@ export const useClientStore = create<ClientState>((set, get) => ({
   addClient: async (data) => {
     console.log('[DEBUG] addClient called with data:', data)
     const now = new Date().toISOString()
+    const id = createId()
     const client: Client = {
       ...data,
-      id: createId(),
+      id,
       notes: data.notes?.trim() || undefined,
       createdAt: now,
       updatedAt: now,
@@ -150,6 +151,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
           console.error('Failed to send email notification:', error)
         })
     }
+
+    return id
   },
   updateClient: async (id, data) => {
     const existing = get().clients.find((c) => c.id === id)
