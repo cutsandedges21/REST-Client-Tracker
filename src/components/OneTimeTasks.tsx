@@ -4,6 +4,7 @@ import { GlowCard } from './GlowCard'
 interface OneTimeTasksProps {
   onTasksChange: (tasks: Array<{ amount: number; timeSpent: number }>) => void
   onExpensesChange: (expenses: Array<{ amount: number }>) => void
+  username?: string
 }
 
 interface Task {
@@ -21,7 +22,7 @@ interface Expense {
   date: string
 }
 
-export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksProps) {
+export function OneTimeTasks({ onTasksChange, onExpensesChange, username }: OneTimeTasksProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
@@ -33,7 +34,8 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
   const [expenseAmount, setExpenseAmount] = useState('')
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem('oneTimeTasks')
+    if (!username) return
+    const savedTasks = localStorage.getItem(`oneTimeTasks_${username}`)
     if (savedTasks) {
       const parsedTasks = JSON.parse(savedTasks)
       setTasks(parsedTasks)
@@ -42,7 +44,7 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
       }
     }
 
-    const savedExpenses = localStorage.getItem('expenses')
+    const savedExpenses = localStorage.getItem(`expenses_${username}`)
     if (savedExpenses) {
       const parsedExpenses = JSON.parse(savedExpenses)
       setExpenses(parsedExpenses)
@@ -50,9 +52,10 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
         onExpensesChange(parsedExpenses)
       }
     }
-  }, [onTasksChange, onExpensesChange])
+  }, [onTasksChange, onExpensesChange, username])
 
   const addTask = () => {
+    if (!username) return
     if (!description || !amount || !timeSpent) {
       alert('Please fill in all fields')
       return
@@ -71,7 +74,7 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
 
     const updatedTasks = [...tasks, newTask]
     setTasks(updatedTasks)
-    localStorage.setItem('oneTimeTasks', JSON.stringify(updatedTasks))
+    localStorage.setItem(`oneTimeTasks_${username}`, JSON.stringify(updatedTasks))
     if (onTasksChange) {
       onTasksChange(updatedTasks)
     }
@@ -83,15 +86,17 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
   }
 
   const removeTask = (id: number) => {
+    if (!username) return
     const updatedTasks = tasks.filter(task => task.id !== id)
     setTasks(updatedTasks)
-    localStorage.setItem('oneTimeTasks', JSON.stringify(updatedTasks))
+    localStorage.setItem(`oneTimeTasks_${username}`, JSON.stringify(updatedTasks))
     if (onTasksChange) {
       onTasksChange(updatedTasks)
     }
   }
 
   const addExpense = () => {
+    if (!username) return
     if (!expenseDescription || !expenseAmount) {
       alert('Please fill in all fields')
       return
@@ -106,7 +111,7 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
 
     const updatedExpenses = [...expenses, newExpense]
     setExpenses(updatedExpenses)
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses))
+    localStorage.setItem(`expenses_${username}`, JSON.stringify(updatedExpenses))
     if (onExpensesChange) {
       onExpensesChange(updatedExpenses)
     }
@@ -117,9 +122,10 @@ export function OneTimeTasks({ onTasksChange, onExpensesChange }: OneTimeTasksPr
   }
 
   const removeExpense = (id: number) => {
+    if (!username) return
     const updatedExpenses = expenses.filter(expense => expense.id !== id)
     setExpenses(updatedExpenses)
-    localStorage.setItem('expenses', JSON.stringify(updatedExpenses))
+    localStorage.setItem(`expenses_${username}`, JSON.stringify(updatedExpenses))
     if (onExpensesChange) {
       onExpensesChange(updatedExpenses)
     }
