@@ -18,10 +18,9 @@ export function EarningsChart({ clients }: EarningsChartProps) {
     return (
       <GlowCard>
         <div className="p-8 text-center">
-          <h2 className="text-lg font-semibold" style={{ color: `rgb(var(--color-primary-dark))` }}>Monthly revenue (estimated)</h2>
+          <h2 className="text-lg font-semibold" style={{ color: `rgb(var(--color-primary-dark))` }}>Monthly revenue</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Add clients to see each client&apos;s share of estimated monthly income (weekly ×4, bi-weekly ×2, every 3 weeks & monthly ×1 per
-            cut rate).
+            Add clients to see each client&apos;s share of monthly income.
           </p>
         </div>
       </GlowCard>
@@ -31,13 +30,8 @@ export function EarningsChart({ clients }: EarningsChartProps) {
   return (
     <GlowCard>
       <div className="p-4 md:p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Monthly revenue (estimated)</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Each bar is <span className="font-medium" style={{ color: `rgb(var(--color-primary-dark))` }}>rate × visits per month</span> • Total monthly estimate:{' '}
-          <span className="font-medium" style={{ color: `rgb(var(--color-primary-dark))` }}>{formatCurrency(metrics.totalMonthlyRevenue)}</span>
-          {' • '}
-          {metrics.totalClients} client{metrics.totalClients !== 1 ? 's' : ''}
-        </p>
+        <h2 className="text-lg font-semibold text-slate-900">Monthly Revenue per Client</h2>
+        <br></br>
         <div className="mt-4 h-80 w-full min-h-[16rem]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 8 }}>

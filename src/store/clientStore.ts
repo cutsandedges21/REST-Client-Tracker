@@ -13,11 +13,6 @@ function legacyPerCut(raw: Record<string, unknown>): number {
 }
 
 function normalizeClient(raw: Record<string, unknown>): Client {
-  console.log('[DEBUG] normalizeClient called with raw:', raw)
-  const lawnSizeCategory: LawnSizeCategory =
-    raw.lawnSizeCategory === 'small' || raw.lawnSizeCategory === 'medium' || raw.lawnSizeCategory === 'large'
-      ? raw.lawnSizeCategory as LawnSizeCategory
-      : 'medium'
   const serviceFrequency: ServiceFrequency =
     raw.serviceFrequency === 'weekly' ||
     raw.serviceFrequency === 'biweekly' ||
@@ -26,30 +21,31 @@ function normalizeClient(raw: Record<string, unknown>): Client {
       ? raw.serviceFrequency as ServiceFrequency
       : 'weekly'
 
-  const client: Client = {
+  return {
     id: String(raw.id),
+    username: String(raw.username ?? ''),
     fullName: String(raw.fullName ?? ''),
     phone: String(raw.phone ?? '').trim(),
     email: String(raw.email ?? '').trim(),
     address: String(raw.address ?? ''),
     perCutRate: legacyPerCut(raw),
-    lawnSizeCategory,
+    expensePerClient: Number(raw.expensePerClient ?? 0),
     cutDurationMinutes: Number(raw.cutDurationMinutes ?? 0),
     serviceFrequency,
     notes: raw.notes ? String(raw.notes) : undefined,
     createdAt: String(raw.createdAt ?? new Date().toISOString()),
     updatedAt: String(raw.updatedAt ?? new Date().toISOString()),
   }
-  console.log('[DEBUG] Normalized client:', client)
-  return client
 }
 
 interface ClientState {
+  username: string | null
   clients: Client[]
   appointments: ScheduledSlot[]
   isLoaded: boolean
   searchTerm: string
   viewMode: ViewMode
+  setUsername: (username: string) => void
   initialize: () => Promise<void>
   addClient: (data: ClientFormInput) => Promise<string>
   updateClient: (id: string, data: ClientFormInput) => Promise<void>
@@ -82,56 +78,47 @@ function slotConflict(
 }
 
 export const useClientStore = create<ClientState>((set, get) => ({
+  username: null,
   clients: [],
   appointments: [],
   isLoaded: false,
   searchTerm: '',
   viewMode: 'cards',
+  setUsername: (username) => set({ username, isLoaded: false }),
   initialize: async () => {
-    console.log('[DEBUG] initialize called, isLoaded:', get().isLoaded)
     if (get().isLoaded) return
+    const username = get().username
+    if (!username) return
+
     try {
-      console.log('[DEBUG] Loading clients from database...')
-      const rawClients = await db.clients.orderBy('updatedAt').reverse().toArray()
-      console.log('[DEBUG] Raw clients from database:', rawClients)
-
-      console.log('[DEBUG] Normalizing clients...')
+      const rawClients = await db.clients.where('username').equals(username).reverse().toArray()
       const clients = rawClients.map((c) => normalizeClient(c as unknown as Record<string, unknown>))
-      console.log('[DEBUG] Normalized clients:', clients)
-
-      console.log('[DEBUG] Loading appointments from database...')
-      const appointments = await db.appointments.orderBy('date').toArray()
-      console.log('[DEBUG] Appointments from database:', appointments)
-
-      console.log('[DEBUG] Setting state...')
+      const appointments = await db.appointments.where('username').equals(username).toArray()
       set({ clients, appointments, isLoaded: true })
-      console.log('[DEBUG] Initialization complete')
     } catch (error) {
       console.error('[ERROR] Failed to initialize:', error)
       throw error
     }
   },
   addClient: async (data) => {
-    console.log('[DEBUG] addClient called with data:', data)
+    const username = get().username
+    if (!username) {
+      throw new Error('No username set')
+    }
     const now = new Date().toISOString()
     const id = createId()
     const client: Client = {
       ...data,
       id,
+      username,
       notes: data.notes?.trim() || undefined,
       createdAt: now,
       updatedAt: now,
     }
-    console.log('[DEBUG] Created client object:', client)
 
     try {
-      console.log('[DEBUG] About to save to database...')
       await db.clients.put(client)
-      console.log('[DEBUG] Saved to database successfully')
-
-      console.log('[DEBUG] About to update state...')
       set((state) => ({ clients: [client, ...state.clients] }))
-      console.log('[DEBUG] State updated successfully')
     } catch (error) {
       console.error('[ERROR] Failed to add client:', error)
       throw error
@@ -139,9 +126,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
     // Trigger email notification
     const userEmail = emailService.getUserEmail()
-    console.log('[DEBUG] User email:', userEmail)
     if (userEmail) {
-      console.log('[DEBUG] Attempting to send email...')
       void emailService
         .sendEmail({
           type: 'newClient',
@@ -200,12 +185,17 @@ export const useClientStore = create<ClientState>((set, get) => ({
     set((state) => ({ clients: [client, ...state.clients.filter((item) => item.id !== client.id)] }))
   },
   addAppointment: async ({ clientId, date, time }) => {
+    const username = get().username
+    if (!username) {
+      throw new Error('No username set')
+    }
     if (slotConflict(get().appointments, date, time)) {
       return { ok: false, reason: 'That time is already booked on this day.' }
     }
     const now = new Date().toISOString()
     const slot: ScheduledSlot = {
       id: createId(),
+      username,
       clientId,
       date,
       time,

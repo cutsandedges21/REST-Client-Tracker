@@ -36,7 +36,7 @@ export function ClientEditDialog({ client, open, onClose, onSave }: ClientEditDi
         email: client.email,
         address: client.address,
         perCutRate: client.perCutRate,
-        lawnSizeCategory: client.lawnSizeCategory,
+        expensePerClient: client.expensePerClient,
         cutDurationMinutes: client.cutDurationMinutes,
         serviceFrequency: client.serviceFrequency,
         notes: client.notes ?? '',
@@ -99,13 +99,9 @@ export function ClientEditDialog({ client, open, onClose, onSave }: ClientEditDi
                     <FieldError error={errors.perCutRate?.message} />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-sm font-medium text-slate-700">Lawn size</span>
-                    <select className={inputClass} {...register('lawnSizeCategory')}>
-                      <option value="small">Small</option>
-                      <option value="medium">Medium</option>
-                      <option value="large">Large</option>
-                    </select>
-                    <FieldError error={errors.lawnSizeCategory?.message} />
+                    <span className="text-sm font-medium text-slate-700">Expense per client (CAD)</span>
+                    <input type="number" min={0} step="0.01" className={inputClass} {...register('expensePerClient', { valueAsNumber: true })} />
+                    <FieldError error={errors.expensePerClient?.message} />
                   </label>
                   <label className="space-y-1">
                     <span className="text-sm font-medium text-slate-700">Service frequency</span>

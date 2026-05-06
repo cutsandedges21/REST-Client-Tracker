@@ -1,24 +1,30 @@
 import { motion } from 'framer-motion'
-import { DollarSign, Timer, Users } from 'lucide-react'
+import { DollarSign, Timer, Users, TrendingDown, TrendingUp } from 'lucide-react'
 import { formatCurrency, formatTotalMonthlyTime } from '../lib/finance'
 import { GlowCard } from './GlowCard'
 
 interface DashboardStatsProps {
   totalClients: number
   totalMonthlyRevenue: number
+  totalMonthlyExpense: number
+  totalMonthlyNet: number
   totalMonthlyMinutes: number
 }
 
 const stats = [
   { key: 'totalClients', title: 'Total Clients', icon: Users, format: 'count' as const },
   { key: 'totalMonthlyRevenue', title: 'Est. Monthly Revenue', icon: DollarSign, format: 'currency' as const },
+  { key: 'totalMonthlyExpense', title: 'Est. Monthly Expense', icon: TrendingDown, format: 'currency' as const },
+  { key: 'totalMonthlyNet', title: 'Est. Monthly Net', icon: TrendingUp, format: 'currency' as const },
   { key: 'totalMonthlyMinutes', title: 'Total Time / Month', icon: Timer, format: 'duration' as const },
 ] as const
 
-export function DashboardStats({ totalClients, totalMonthlyRevenue, totalMonthlyMinutes }: DashboardStatsProps) {
+export function DashboardStats({ totalClients, totalMonthlyRevenue, totalMonthlyExpense, totalMonthlyNet, totalMonthlyMinutes }: DashboardStatsProps) {
   const values = {
     totalClients,
     totalMonthlyRevenue,
+    totalMonthlyExpense,
+    totalMonthlyNet,
     totalMonthlyMinutes,
   }
 

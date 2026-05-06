@@ -11,11 +11,12 @@ import { EarningsChart } from './components/EarningsChart'
 import { GlowCard } from './components/GlowCard'
 import { ScheduleCalendar } from './components/ScheduleCalendar'
 import { EmailSettings } from './components/EmailSettings'
-import { EmailAuth } from './components/EmailAuth'
+import { LoginScreen } from './components/LoginScreen'
 import { OneTimeTasks } from './components/OneTimeTasks'
 import { AllTimeStats } from './components/AllTimeStats'
 import { ColorThemeSelector } from './components/ColorThemeSelector'
 import { reminderScheduler } from './services/reminderScheduler'
+import { emailService } from './services/emailService.js'
 import { getDashboardMetrics } from './lib/finance'
 import { colorThemes, type ColorTheme } from './lib/colorThemes'
 import type { Client } from './types/client'
@@ -68,6 +69,7 @@ class ErrorBoundary extends React.Component<
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [colorTheme, setColorTheme] = useState<ColorTheme>('purple')
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
@@ -81,6 +83,7 @@ function App() {
     isLoaded,
     searchTerm,
     viewMode,
+    username,
     initialize,
     addClient,
     updateClient,
@@ -91,20 +94,19 @@ function App() {
     removeAppointment,
     setSearchTerm,
     setViewMode,
+    setUsername,
   } = useClientStore()
 
   useEffect(() => {
-    console.log('[DEBUG] App useEffect - calling initialize')
     const init = async () => {
       try {
         await initialize()
-        console.log('[DEBUG] App useEffect - initialize completed')
       } catch (error) {
         console.error('[ERROR] App useEffect - initialize failed:', error)
       }
     }
     void init()
-  }, [initialize])
+  }, [initialize, username])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -183,7 +185,20 @@ function App() {
     const oneTimeTime = oneTimeTasks.reduce((sum, task) => sum + task.timeSpent, 0)
     const totalTime = regularTime + oneTimeTime
 
-    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+    // Calculate regular client expenses (expensePerClient × frequency)
+    const regularExpenses = filteredClients.reduce((sum, client) => {
+      const frequencyMultipliers: Record<string, number> = {
+        weekly: 4.33,
+        biweekly: 2.17,
+        three_weeks: 1.45,
+        monthly: 1
+      }
+      const monthlyExpense = client.expensePerClient * (frequencyMultipliers[client.serviceFrequency] || 1)
+      return sum + monthlyExpense
+    }, 0)
+
+    const oneTimeExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+    const totalExpenses = regularExpenses + oneTimeExpenses
 
     return {
       totalEarnings,
@@ -210,6 +225,22 @@ function App() {
     if (!editingClient) return
     await updateClient(editingClient.id, values)
     toast.success('Client Updated Successfully')
+  }
+
+  const handleLogin = (username: string) => {
+    setUsername(username)
+    emailService.setUsername(username)
+    setIsAuthenticated(true)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('userAuth')
+    setIsAuthenticated(false)
+    setUsername(null)
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={handleLogin} />
   }
 
   return (
@@ -247,16 +278,27 @@ function App() {
                   {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                   {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-2 self-start rounded-xl border border-red-300 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  Sign Out
+                </button>
               </div>
             </header>
           </GlowCard>
 
           <AllTimeStats {...allTimeStats} />
           <DashboardStats {...metrics} />
-          <OneTimeTasks onTasksChange={setOneTimeTasks} onExpensesChange={setExpenses} />
-          <EmailSettings />
-          <EmailAuth />
-          <ClientForm onSubmit={addClient} />
+          <OneTimeTasks onTasksChange={setOneTimeTasks} onExpensesChange={setExpenses} username={username} />
+          <EmailSettings username={username} />
+          <ClientForm onSubmit={addClient} onSchedule={async (clientId, date, time) => {
+            const result = await addAppointment({ clientId, date, time })
+            if (!result.ok) {
+              toast.error((result as { ok: false; reason: string }).reason)
+            }
+          }} />
 
           <GlowCard>
             <div className="p-4 md:p-5">
@@ -292,6 +334,7 @@ function App() {
             >
               <ClientList
                 clients={filteredClients}
+                appointments={appointments}
                 viewMode={viewMode}
                 onRemove={setPendingDelete}
                 onEdit={setEditingClient}

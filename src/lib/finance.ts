@@ -20,6 +20,14 @@ export function getMonthlyRevenue(client: Pick<Client, 'perCutRate' | 'serviceFr
   return client.perCutRate * getCutsPerMonth(client.serviceFrequency)
 }
 
+export function getMonthlyExpense(client: Pick<Client, 'expensePerClient' | 'serviceFrequency'>): number {
+  return client.expensePerClient * getCutsPerMonth(client.serviceFrequency)
+}
+
+export function getMonthlyNet(client: Client): number {
+  return getMonthlyRevenue(client) - getMonthlyExpense(client)
+}
+
 export function getMonthlyTimeMinutes(client: Pick<Client, 'cutDurationMinutes' | 'serviceFrequency'>): number {
   return client.cutDurationMinutes * getCutsPerMonth(client.serviceFrequency)
 }
@@ -53,11 +61,15 @@ export function formatTotalMonthlyTime(totalMinutes: number): string {
 export const getDashboardMetrics = (clients: Client[]) => {
   const totalClients = clients.length
   const totalMonthlyRevenue = clients.reduce((sum, client) => sum + getMonthlyRevenue(client), 0)
+  const totalMonthlyExpense = clients.reduce((sum, client) => sum + getMonthlyExpense(client), 0)
+  const totalMonthlyNet = totalMonthlyRevenue - totalMonthlyExpense
   const totalMonthlyMinutes = clients.reduce((sum, client) => sum + getMonthlyTimeMinutes(client), 0)
 
   return {
     totalClients,
     totalMonthlyRevenue,
+    totalMonthlyExpense,
+    totalMonthlyNet,
     totalMonthlyMinutes,
   }
 }

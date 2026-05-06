@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { GlowCard } from './GlowCard'
 
-export function EmailSettings() {
+export function EmailSettings({ username }) {
   const [email, setEmail] = useState('')
   const [savedEmail, setSavedEmail] = useState('')
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem('userEmail')
+    if (!username) return
+    const storedEmail = localStorage.getItem(`userEmail_${username}`)
     if (storedEmail) {
       setEmail(storedEmail)
       setSavedEmail(storedEmail)
     }
-  }, [])
+  }, [username])
 
   const handleSave = () => {
+    if (!username) return
     if (email && email.includes('@')) {
-      localStorage.setItem('userEmail', email)
+      localStorage.setItem(`userEmail_${username}`, email)
       setSavedEmail(email)
       alert('Email saved successfully!')
     } else {
@@ -24,7 +26,8 @@ export function EmailSettings() {
   }
 
   const handleClear = () => {
-    localStorage.removeItem('userEmail')
+    if (!username) return
+    localStorage.removeItem(`userEmail_${username}`)
     setEmail('')
     setSavedEmail('')
     alert('Email cleared')

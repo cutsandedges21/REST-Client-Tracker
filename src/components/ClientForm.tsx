@@ -28,10 +28,10 @@ export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
   } = useForm<z.input<typeof clientSchema>, unknown, ClientSchema>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
-      lawnSizeCategory: 'medium',
       serviceFrequency: 'weekly',
       phone: '',
       email: '',
+      expensePerClient: 0,
     },
   })
 
@@ -53,10 +53,10 @@ export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
       }
 
       reset({
-        lawnSizeCategory: 'medium',
         serviceFrequency: 'weekly',
         phone: '',
         email: '',
+        expensePerClient: 0,
       })
       setScheduleClient(false)
       setScheduleDate('')
@@ -102,19 +102,15 @@ export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Rate Per Visit (CAD) *</span>
+              <span className="text-sm font-medium text-slate-700">Job Cost (CAD) *</span>
               <input type="number" min={0} step="0.01" className={inputClass} {...register('perCutRate')} />
               <FieldError error={errors.perCutRate?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Job Size *</span>
-              <select className={inputClass} {...register('lawnSizeCategory')}>
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-              <FieldError error={errors.lawnSizeCategory?.message} />
+              <span className="text-sm font-medium text-slate-700">Expense per Client (CAD) *</span>
+              <input type="number" min={0} step="0.01" className={inputClass} {...register('expensePerClient', { valueAsNumber: true })} />
+              <FieldError error={errors.expensePerClient?.message} />
             </label>
 
             <label className="space-y-1.5">

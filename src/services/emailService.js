@@ -3,6 +3,12 @@ import emailjs from '@emailjs/browser'
 export class EmailService {
   constructor() {
     this.config = null
+    this.username = null
+    this.loadConfig()
+  }
+
+  setUsername(username) {
+    this.username = username
     this.loadConfig()
   }
 
@@ -15,7 +21,8 @@ export class EmailService {
 
   loadConfig() {
     try {
-      const savedConfig = localStorage.getItem('emailjsConfig')
+      const key = this.username ? `emailjsConfig_${this.username}` : 'emailjsConfig'
+      const savedConfig = localStorage.getItem(key)
       if (savedConfig) {
         this.config = JSON.parse(savedConfig)
       } else {
@@ -145,7 +152,8 @@ export class EmailService {
   }
 
   getUserEmail() {
-    return localStorage.getItem('userEmail')
+    const key = this.username ? `userEmail_${this.username}` : 'userEmail'
+    return localStorage.getItem(key)
   }
 
   isConfigured() {

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { Client, ScheduledSlot } from '../types/client'
@@ -170,7 +170,10 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
   return (
     <GlowCard>
       <div className="p-4 md:p-5">
-        <h2 className="text-lg font-semibold text-slate-900" style={{ color: `rgb(var(--color-primary-dark))` }}>Schedule</h2>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5" style={{ color: `rgb(var(--color-primary-dark))` }} />
+          <h2 className="text-lg font-semibold text-slate-900" style={{ color: `rgb(var(--color-primary-dark))` }}>Schedule</h2>
+        </div>
         <p className="mt-1 text-sm text-slate-600">
           Each day/time can only be booked once. Tap a day, pick a free slot, then add. Edit or remove mistakes below.
         </p>

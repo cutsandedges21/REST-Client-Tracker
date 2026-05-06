@@ -4,13 +4,14 @@ export type ServiceFrequency = 'weekly' | 'biweekly' | 'three_weeks' | 'monthly'
 
 export interface Client {
   id: string
+  username: string
   fullName: string
   phone: string
   email: string
   address: string
   /** Flat amount charged per lawn cut (CAD) */
   perCutRate: number
-  lawnSizeCategory: LawnSizeCategory
+  expensePerClient: number
   cutDurationMinutes: number
   serviceFrequency: ServiceFrequency
   notes?: string
@@ -24,7 +25,7 @@ export interface ClientFormInput {
   email: string
   address: string
   perCutRate: number
-  lawnSizeCategory: LawnSizeCategory
+  expensePerClient: number
   cutDurationMinutes: number
   serviceFrequency: ServiceFrequency
   notes?: string
@@ -32,6 +33,7 @@ export interface ClientFormInput {
 
 export interface ScheduledSlot {
   id: string
+  username: string
   clientId: string
   /** YYYY-MM-DD */
   date: string

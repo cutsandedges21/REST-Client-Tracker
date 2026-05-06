@@ -48,6 +48,56 @@ class ClientDatabase extends Dexie {
             delete c.hourlyRate
           })
       })
+    this.version(4)
+      .stores({
+        clients: '&id, username, fullName, updatedAt',
+        appointments: '&id, username, clientId, date',
+      })
+      .upgrade(async (tx) => {
+        // Get the current logged-in user from localStorage
+        const auth = localStorage.getItem('userAuth')
+        const username = auth ? JSON.parse(auth).username : 'mb08'
+
+        // Add username to existing clients
+        await tx
+          .table('clients')
+          .toCollection()
+          .modify((c: Record<string, unknown>) => {
+            if (c.username == null) {
+              c.username = username
+            }
+          })
+
+        // Add username to existing appointments
+        await tx
+          .table('appointments')
+          .toCollection()
+          .modify((a: Record<string, unknown>) => {
+            if (a.username == null) {
+              a.username = username
+            }
+          })
+      })
+    this.version(5)
+      .stores({
+        clients: '&id, username, fullName, updatedAt',
+        appointments: '&id, username, clientId, date',
+      })
+      .upgrade(async (tx) => {
+        // Add expensePerClient to existing clients
+        await tx
+          .table('clients')
+          .toCollection()
+          .modify((c: Record<string, unknown>) => {
+            if (c.expensePerClient == null) {
+              c.expensePerClient = 0
+            }
+            // Remove lawnSizeCategory if it exists
+            if (c.lawnSizeCategory != null) {
+              delete c.lawnSizeCategory
+            }
+          })
+      })
   }
 }
 

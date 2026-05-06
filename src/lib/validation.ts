@@ -16,7 +16,7 @@ export const clientSchema = z.object({
   email: emailOptional,
   address: z.string().trim().min(6, 'Address is required'),
   perCutRate: z.coerce.number().positive('Per-cut rate must be greater than 0'),
-  lawnSizeCategory: z.enum(['small', 'medium', 'large']),
+  expensePerClient: z.coerce.number().min(0, 'Expense cannot be negative'),
   cutDurationMinutes: z.coerce.number().int().positive('Duration must be greater than 0'),
   serviceFrequency: z.enum(['weekly', 'biweekly', 'three_weeks', 'monthly']),
   notes: z.string().trim().max(300, 'Notes cannot exceed 300 characters').optional(),
