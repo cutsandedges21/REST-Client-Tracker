@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarClock, Clock3, Mail, MapPin, Pencil, Phone, Trash2, Calendar, DollarSign } from 'lucide-react'
+import { CalendarClock, Clock3, Mail, MapPin, Pencil, Phone, Trash2, Calendar, Check } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { formatCurrency, formatDuration, getMonthlyRevenue, getMonthlyNet } from '../lib/finance'
 import { serviceFrequencyLabels } from '../lib/labels'
@@ -22,6 +22,7 @@ interface ClientListProps {
   viewMode: 'cards' | 'table'
   onRemove: (client: Client) => void
   onEdit: (client: Client) => void
+  onCompleteJob?: (client: Client) => void
 }
 
 function getNextAppointment(clientId: string, appointments: ScheduledSlot[]): ScheduledSlot | null {
@@ -50,7 +51,7 @@ function formatAppointmentDate(date: string, time: string): string {
   return `${dayName}, ${dateStr} at ${time}`
 }
 
-export function ClientList({ clients, appointments, viewMode, onRemove, onEdit }: ClientListProps) {
+export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, onCompleteJob }: ClientListProps) {
   if (clients.length === 0) {
     return (
       <GlowCard>
@@ -107,6 +108,24 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit }
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+                      {onCompleteJob && (
+                        <button
+                          type="button"
+                          onClick={() => onCompleteJob(client)}
+                          className="rounded-lg p-2 text-slate-500 transition"
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = `var(--color-primary-light)`
+                            e.currentTarget.style.color = `var(--color-primary-dark)`
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = ''
+                            e.currentTarget.style.color = ''
+                          }}
+                          aria-label={`Complete job for ${client.fullName}`}
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onRemove(client)}
@@ -233,13 +252,25 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit }
                       <td className="px-4 py-3 align-top text-slate-700 font-medium" style={{ color: `rgb(var(--color-primary-dark))` }}>{formatCurrency(getMonthlyNet(client))}</td>
                       <Td>{formatDuration(client.cutDurationMinutes)}</Td>
                       <Td>
-                        <button
-                          type="button"
-                          onClick={() => onRemove(client)}
-                          className="rounded-lg p-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex gap-1">
+                          {onCompleteJob && (
+                            <button
+                              type="button"
+                              onClick={() => onCompleteJob(client)}
+                              className="rounded-lg p-2 text-slate-500 transition"
+                              aria-label={`Complete job for ${client.fullName}`}
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onRemove(client)}
+                            className="rounded-lg p-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </Td>
                     </motion.tr>
                   )

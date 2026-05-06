@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import type { Client, ClientFormInput, ScheduledSlot, LawnSizeCategory, ServiceFrequency } from '../types/client'
+import type { Client, ClientFormInput, ScheduledSlot, ServiceFrequency } from '../types/client'
+import type { CompletedJob } from '../types/completedJob'
 import { db } from './db'
 import { emailService } from '../services/emailService.js'
 
@@ -42,6 +43,7 @@ interface ClientState {
   username: string | null
   clients: Client[]
   appointments: ScheduledSlot[]
+  completedJobs: CompletedJob[]
   isLoaded: boolean
   searchTerm: string
   viewMode: ViewMode
@@ -57,6 +59,9 @@ interface ClientState {
     input: { clientId: string; date: string; time: string },
   ) => Promise<{ ok: true } | { ok: false; reason: string }>
   removeAppointment: (id: string) => Promise<void>
+  addCompletedJob: (job: Omit<CompletedJob, 'id' | 'username' | 'createdAt' | 'updatedAt'>) => Promise<string>
+  updateCompletedJob: (id: string, job: Partial<CompletedJob>) => Promise<void>
+  deleteCompletedJob: (id: string) => Promise<void>
   setSearchTerm: (term: string) => void
   setViewMode: (mode: ViewMode) => void
 }
@@ -81,6 +86,7 @@ export const useClientStore = create<ClientState>((set, get) => ({
   username: null,
   clients: [],
   appointments: [],
+  completedJobs: [],
   isLoaded: false,
   searchTerm: '',
   viewMode: 'cards',
@@ -94,7 +100,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const rawClients = await db.clients.where('username').equals(username).reverse().toArray()
       const clients = rawClients.map((c) => normalizeClient(c as unknown as Record<string, unknown>))
       const appointments = await db.appointments.where('username').equals(username).toArray()
-      set({ clients, appointments, isLoaded: true })
+      const completedJobs = await db.completedJobs.where('username').equals(username).toArray()
+      set({ clients, appointments, completedJobs, isLoaded: true })
     } catch (error) {
       console.error('[ERROR] Failed to initialize:', error)
       throw error
@@ -183,6 +190,43 @@ export const useClientStore = create<ClientState>((set, get) => ({
   restoreClient: async (client) => {
     await db.clients.put(client)
     set((state) => ({ clients: [client, ...state.clients.filter((item) => item.id !== client.id)] }))
+  },
+  addCompletedJob: async (job) => {
+    const username = get().username
+    if (!username) {
+      throw new Error('No username set')
+    }
+    const now = new Date().toISOString()
+    const id = createId()
+    const completedJob: CompletedJob = {
+      ...job,
+      id,
+      username,
+      createdAt: now,
+      updatedAt: now,
+    }
+    await db.completedJobs.put(completedJob)
+    set((state) => ({ completedJobs: [...state.completedJobs, completedJob] }))
+    return id
+  },
+  updateCompletedJob: async (id, job) => {
+    const existing = get().completedJobs.find((j) => j.id === id)
+    if (!existing) return
+    const updated: CompletedJob = {
+      ...existing,
+      ...job,
+      updatedAt: new Date().toISOString(),
+    }
+    await db.completedJobs.put(updated)
+    set((state) => ({
+      completedJobs: state.completedJobs.map((j) => (j.id === id ? updated : j)),
+    }))
+  },
+  deleteCompletedJob: async (id) => {
+    await db.completedJobs.delete(id)
+    set((state) => ({
+      completedJobs: state.completedJobs.filter((j) => j.id !== id),
+    }))
   },
   addAppointment: async ({ clientId, date, time }) => {
     const username = get().username

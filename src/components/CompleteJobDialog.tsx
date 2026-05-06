@@ -1,9 +1,6 @@
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
-import { Label } from './ui/label'
-import { Textarea } from './ui/textarea'
+import { motion, AnimatePresence } from 'framer-motion'
+import { GlowCard } from './GlowCard'
 import type { Client } from '../types/client'
 
 interface CompleteJobDialogProps {
@@ -36,8 +33,6 @@ export function CompleteJobDialog({
   const [expenses, setExpenses] = useState('')
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const selectedClient = clients.find((c) => c.id === clientId)
 
   // Auto-fill when client changes
   const handleClientChange = (newClientId: string) => {
@@ -131,104 +126,136 @@ export function CompleteJobDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Complete Job</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="client">Client</Label>
-              <select
-                id="client"
-                value={clientId}
-                onChange={(e) => handleClientChange(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
-              >
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.fullName}
-                  </option>
-                ))}
-              </select>
-              {errors.clientId && <p className="text-sm text-red-600">{errors.clientId}</p>}
-            </div>
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-40 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 14 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ duration: 0.22 }}
+            className="w-full max-w-md"
+          >
+            <GlowCard>
+              <div className="p-5">
+                <h2 className="text-lg font-semibold text-slate-900">Complete Job</h2>
+                <form onSubmit={handleSubmit}>
+                  <div className="mt-4 grid gap-4">
+                    <div className="grid gap-2">
+                      <label htmlFor="client" className="text-sm font-medium text-slate-700">Client</label>
+                      <select
+                        id="client"
+                        value={clientId}
+                        onChange={(e) => handleClientChange(e.target.value)}
+                        className="flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                      >
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.fullName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.clientId && <p className="text-sm text-red-600">{errors.clientId}</p>}
+                    </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-              />
-              {errors.date && <p className="text-sm text-red-600">{errors.date}</p>}
-            </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="date" className="text-sm font-medium text-slate-700">Date</label>
+                      <input
+                        id="date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
+                        className="flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                      />
+                      {errors.date && <p className="text-sm text-red-600">{errors.date}</p>}
+                    </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="earnings">Earnings (CAD)</Label>
-              <Input
-                id="earnings"
-                type="number"
-                step="0.01"
-                min="0"
-                value={earnings}
-                onChange={(e) => setEarnings(e.target.value)}
-                placeholder="0.00"
-              />
-              {errors.earnings && <p className="text-sm text-red-600">{errors.earnings}</p>}
-            </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="earnings" className="text-sm font-medium text-slate-700">Earnings (CAD)</label>
+                      <input
+                        id="earnings"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={earnings}
+                        onChange={(e) => setEarnings(e.target.value)}
+                        placeholder="0.00"
+                        className="flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                      />
+                      {errors.earnings && <p className="text-sm text-red-600">{errors.earnings}</p>}
+                    </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="timeSpent">Time Spent (minutes)</Label>
-              <Input
-                id="timeSpent"
-                type="number"
-                step="1"
-                min="0"
-                value={timeSpent}
-                onChange={(e) => setTimeSpent(e.target.value)}
-                placeholder="0"
-              />
-              {errors.timeSpent && <p className="text-sm text-red-600">{errors.timeSpent}</p>}
-            </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="timeSpent" className="text-sm font-medium text-slate-700">Time Spent (minutes)</label>
+                      <input
+                        id="timeSpent"
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={timeSpent}
+                        onChange={(e) => setTimeSpent(e.target.value)}
+                        placeholder="0"
+                        className="flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                      />
+                      {errors.timeSpent && <p className="text-sm text-red-600">{errors.timeSpent}</p>}
+                    </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="expenses">Expenses (CAD)</Label>
-              <Input
-                id="expenses"
-                type="number"
-                step="0.01"
-                min="0"
-                value={expenses}
-                onChange={(e) => setExpenses(e.target.value)}
-                placeholder="0.00"
-              />
-              {errors.expenses && <p className="text-sm text-red-600">{errors.expenses}</p>}
-            </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="expenses" className="text-sm font-medium text-slate-700">Expenses (CAD)</label>
+                      <input
+                        id="expenses"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={expenses}
+                        onChange={(e) => setExpenses(e.target.value)}
+                        placeholder="0.00"
+                        className="flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                      />
+                      {errors.expenses && <p className="text-sm text-red-600">{errors.expenses}</p>}
+                    </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any additional details..."
-                rows={3}
-              />
-            </div>
-          </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="notes" className="text-sm font-medium text-slate-700">Notes (optional)</label>
+                      <textarea
+                        id="notes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Any additional details..."
+                        rows={3}
+                        className="flex w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)] resize-none"
+                      />
+                    </div>
+                  </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">Save Job</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+                  <div className="mt-5 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      style={{ backgroundColor: 'var(--color-primary)' }}
+                    >
+                      Save Job
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </GlowCard>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   )
 }

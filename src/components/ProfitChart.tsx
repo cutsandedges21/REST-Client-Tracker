@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatCurrency } from '../lib/finance'
-import { aggregateJobsByTimeUnit, filterJobsByDateRange, calculateOverallProfitPercentage } from '../lib/profitChart'
+import { aggregateJobsByTimeUnit, filterJobsByDateRange } from '../lib/profitChart'
 import type { CompletedJob, TimeRange } from '../types/completedJob'
 import { GlowCard } from './GlowCard'
 
@@ -16,7 +16,6 @@ export function ProfitChart({ completedJobs }: ProfitChartProps) {
 
   const filteredJobs = filterJobsByDateRange(completedJobs, timeRange)
   const data = aggregateJobsByTimeUnit(filteredJobs, timeRange)
-  const overallProfitPercentage = calculateOverallProfitPercentage(completedJobs)
 
   if (completedJobs.length === 0) {
     return (

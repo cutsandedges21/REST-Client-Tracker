@@ -12,9 +12,12 @@
   -moz-osx-font-smoothing: grayscale;
 
   /* Color theme variables */
-  --color-primary: 139, 92, 246; /* violet RGB */
-  --color-primary-light: 245, 243, 255; /* violet-50 RGB */
-  --color-primary-dark: 124, 58, 237; /* violet-700 RGB */
+  --color-primary: 139, 92, 246;
+  /* violet RGB */
+  --color-primary-light: 245, 243, 255;
+  /* violet-50 RGB */
+  --color-primary-dark: 124, 58, 237;
+  /* violet-700 RGB */
 
   /* Text color variables */
   --color-text-primary: #0f172a;
@@ -32,10 +35,6 @@ body {
 
 #root {
   min-height: 100vh;
-}
-
-[data-theme='dark'] body {
-  background-color: #09090b;
 }
 
 [data-theme='dark'] .glass-card {
@@ -106,12 +105,10 @@ body {
   --glow-x: 50%;
   --glow-y: 50%;
   touch-action: pan-y;
-  background: radial-gradient(
-    380px circle at var(--glow-x) var(--glow-y),
-    rgba(var(--color-primary), 0.55),
-    rgba(var(--color-primary), 0.28) 38%,
-    rgba(226, 232, 240, 0.75) 72%
-  );
+  background: radial-gradient(380px circle at var(--glow-x) var(--glow-y),
+      rgba(var(--color-primary), 0.55),
+      rgba(var(--color-primary), 0.28) 38%,
+      rgba(226, 232, 240, 0.75) 72%);
 }
 
 .glow-border-inner {
@@ -122,12 +119,10 @@ body {
 }
 
 [data-theme='dark'] .glow-border-root {
-  background: radial-gradient(
-    380px circle at var(--glow-x) var(--glow-y),
-    rgba(var(--color-primary), 0.45),
-    rgba(var(--color-primary-dark), 0.2) 40%,
-    rgba(39, 39, 42, 0.85) 70%
-  );
+  background: radial-gradient(380px circle at var(--glow-x) var(--glow-y),
+      rgba(var(--color-primary), 0.45),
+      rgba(var(--color-primary-dark), 0.2) 40%,
+      rgba(39, 39, 42, 0.85) 70%);
 }
 
 [data-theme='dark'] .glow-border-inner {

@@ -41,16 +41,18 @@ export function aggregateJobsByTimeUnit(jobs: CompletedJob[], timeRange: TimeRan
     let key: string
 
     switch (timeRange) {
-      case '1D':
+      case '1D': {
         // Hourly aggregation
         const hour = date.getHours()
         key = `${hour}:00`
         break
-      case '1W':
+      }
+      case '1W': {
         // Day of week
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         key = days[date.getDay()]
         break
+      }
       case '2W':
       case '1M':
         // Daily

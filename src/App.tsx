@@ -1,6 +1,6 @@
 import React, { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Moon, Search, Sun } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { ClientEditDialog } from './components/ClientEditDialog'
 import { ClientForm } from './components/ClientForm'
@@ -10,12 +10,16 @@ import { DeleteConfirmDialog } from './components/DeleteConfirmDialog'
 import { EarningsChart } from './components/EarningsChart'
 import { GlowCard } from './components/GlowCard'
 import { ScheduleCalendar } from './components/ScheduleCalendar'
-import { EmailSettings } from './components/EmailSettings'
 import { LoginScreen } from './components/LoginScreen'
 import { OneTimeTasks } from './components/OneTimeTasks'
 import { AllTimeStats } from './components/AllTimeStats'
-import { ColorThemeSelector } from './components/ColorThemeSelector'
+import { ProfitChart } from './components/ProfitChart'
+import { CompleteJobDialog } from './components/CompleteJobDialog'
 import { AnimatedBackground } from './components/AnimatedBackground'
+import { SettingsGear, type SettingsView } from './components/SettingsGear'
+import { ThemePage } from './pages/ThemePage'
+import { EmailPage } from './pages/EmailPage'
+import { AccountPage } from './pages/AccountPage'
 import { reminderScheduler } from './services/reminderScheduler'
 import { emailService } from './services/emailService.js'
 import { getDashboardMetrics } from './lib/finance'
@@ -73,10 +77,13 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [colorTheme, setColorTheme] = useState<ColorTheme>('purple')
+  const [view, setView] = useState<SettingsView>('main')
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [oneTimeTasks, setOneTimeTasks] = useState<Array<{ amount: number; timeSpent: number }>>([])
   const [expenses, setExpenses] = useState<Array<{ amount: number }>>([])
+  const [completeJobOpen, setCompleteJobOpen] = useState(false)
+  const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined)
 
   const {
     clients,
@@ -96,6 +103,8 @@ function App() {
     setSearchTerm,
     setViewMode,
     setUsername,
+    completedJobs,
+    addCompletedJob,
   } = useClientStore()
 
   useEffect(() => {
@@ -238,6 +247,25 @@ function App() {
     localStorage.removeItem('userAuth')
     setIsAuthenticated(false)
     setUsername(null)
+    setView('main')
+  }
+
+  const handleCompleteJob = (client?: Client) => {
+    setPreselectedClientId(client?.id)
+    setCompleteJobOpen(true)
+  }
+
+  const handleSaveJob = async (job: {
+    clientId: string
+    clientName: string
+    date: string
+    earnings: number
+    timeSpent: number
+    expenses: number
+    notes?: string
+  }) => {
+    await addCompletedJob(job)
+    toast.success('Job Completed Successfully')
   }
 
   if (!isAuthenticated) {
@@ -253,48 +281,64 @@ function App() {
         <div className="flex min-h-screen items-center justify-center">
           <p className="text-slate-600 text-sm animate-pulse">Loading your data...</p>
         </div>
+      ) : view === 'theme' ? (
+        <ThemePage
+          theme={theme}
+          colorTheme={colorTheme}
+          onThemeChange={setTheme}
+          onColorThemeChange={setColorTheme}
+          onBack={() => setView('main')}
+        />
+      ) : view === 'email' ? (
+        <EmailPage username={username} onBack={() => setView('main')} />
+      ) : view === 'account' ? (
+        <AccountPage username={username} onSignOut={handleLogout} onBack={() => setView('main')} />
       ) : (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-          <GlowCard>
-            <header className="flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center md:p-6">
-              <div>
-                <p className="text-sm font-medium" style={{ color: `var(--color-primary-dark)` }}>REST Client Tracker: Keep track of your business</p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl" style={{ color: `rgb(var(--color-primary-dark))` }}>
-                  Revenue
-                  <br></br>
-                  Email
-                  <br></br>
-                  Schedule
-                  <br></br>
-                  Track
-                </h1>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <ColorThemeSelector currentTheme={colorTheme} onThemeChange={setColorTheme} />
-                <button
-                  type="button"
-                  onClick={() => setTheme((current) => (current === 'light' ? 'dark' : 'light'))}
-                  className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium transition hover:bg-slate-100"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                  {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="inline-flex items-center gap-2 self-start rounded-xl border border-red-300 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
-                >
-                  Sign Out
-                </button>
-              </div>
-            </header>
-          </GlowCard>
+          <header className="relative overflow-hidden flex flex-col items-center gap-8 py-14 md:py-20 -top-8 px-8"
+          >
+
+            {/* soft glow behind the letters */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(ellipse, rgb(var(--color-primary-dark), 0.18) 0%, transparent 70%)" }} />
+
+            <div className="flex items-end">
+              {[
+                { letter: "R", word: "Revenue" },
+                { letter: "E", word: "Email" },
+                { letter: "S", word: "Schedule" },
+                { letter: "T", word: "Track" },
+              ].map((item, i, arr) => (
+                <div key={item.letter}
+                  className="relative flex flex-col items-center gap-2.5 px-5 md:px-7"
+                  style={i < arr.length - 1 ? {
+                    borderRight: "1px solid rgb(var(--color-primary-dark))"
+                  } : {}}>
+                  <span className="text-7xl md:text-8xl font-extrabold leading-none tracking-tight"
+                    style={{ color: `rgb(var(--color-primary-dark))`, textShadow: "0 0 40px rgb(var(--color-primary-dark), 0.35)" }}>
+                    {item.letter}
+                  </span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                    style={{ color: `rgb(var(--color-primary-dark))` }}>
+                    {item.word}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] rounded-full px-5 py-1.5"
+              style={{
+                color: "rgb(var(--color-primary-dark))",
+                border: "1px solid rgb(var(--color-primary-dark))"
+              }}>
+              Client Tracker
+            </span>
+          </header>
 
           <AllTimeStats {...allTimeStats} />
+          <ProfitChart completedJobs={completedJobs} />
           <DashboardStats {...metrics} />
           <OneTimeTasks onTasksChange={setOneTimeTasks} onExpensesChange={setExpenses} username={username} />
-          <EmailSettings username={username} />
           <ClientForm onSubmit={addClient} onSchedule={async (clientId, date, time) => {
             const result = await addAppointment({ clientId, date, time })
             if (!result.ok) {
@@ -340,6 +384,7 @@ function App() {
                 viewMode={viewMode}
                 onRemove={setPendingDelete}
                 onEdit={setEditingClient}
+                onCompleteJob={handleCompleteJob}
               />
             </motion.div>
           </AnimatePresence>
@@ -368,6 +413,16 @@ function App() {
         onClose={() => setEditingClient(null)}
         onSave={handleSaveEdit}
       />
+
+      <CompleteJobDialog
+        open={completeJobOpen}
+        onClose={() => setCompleteJobOpen(false)}
+        onSave={handleSaveJob}
+        clients={clients}
+        preselectedClientId={preselectedClientId}
+      />
+
+      {isLoaded && <SettingsGear currentView={view} onNavigate={setView} />}
     </main>
   )
 }

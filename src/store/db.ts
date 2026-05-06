@@ -1,9 +1,11 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Client, ScheduledSlot } from '../types/client'
+import type { CompletedJob } from '../types/completedJob'
 
 class ClientDatabase extends Dexie {
   clients!: EntityTable<Client, 'id'>
   appointments!: EntityTable<ScheduledSlot, 'id'>
+  completedJobs!: EntityTable<CompletedJob, 'id'>
 
   constructor() {
     super('client-tracker-db')
