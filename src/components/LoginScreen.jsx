@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { GlowCard } from './GlowCard'
+import { LiquidAurora } from './LiquidAurora'
 
 export function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -72,8 +73,10 @@ export function LoginScreen({ onLogin }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <GlowCard>
+    <div className="flex min-h-screen items-center justify-center px-4 relative overflow-hidden bg-[#0a0418]">
+      <LiquidAurora />
+      <div className="relative z-10 w-full flex justify-center">
+        <GlowCard>
         <div className="w-full max-w-md p-6 md:p-8">
           <h1 className="mb-2 text-2xl font-semibold tracking-tight" style={{ color: `rgb(var(--color-primary-dark))` }}>
             {isRegistering ? 'Create Account' : 'Welcome Back'}
@@ -135,7 +138,8 @@ export function LoginScreen({ onLogin }) {
             {isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
         </div>
-      </GlowCard>
+        </GlowCard>
+      </div>
     </div>
   )
 }

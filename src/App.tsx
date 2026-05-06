@@ -15,6 +15,7 @@ import { LoginScreen } from './components/LoginScreen'
 import { OneTimeTasks } from './components/OneTimeTasks'
 import { AllTimeStats } from './components/AllTimeStats'
 import { ColorThemeSelector } from './components/ColorThemeSelector'
+import { AnimatedBackground } from './components/AnimatedBackground'
 import { reminderScheduler } from './services/reminderScheduler'
 import { emailService } from './services/emailService.js'
 import { getDashboardMetrics } from './lib/finance'
@@ -244,7 +245,8 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 text-slate-900 transition-colors md:px-8" style={{ background: `linear-gradient(to bottom, var(--color-primary-light), white, white)` }}>
+    <main className="relative min-h-screen px-4 py-8 text-slate-900 transition-colors md:px-8">
+      <AnimatedBackground />
       <Toaster richColors position="top-right" />
 
       {!isLoaded ? (
