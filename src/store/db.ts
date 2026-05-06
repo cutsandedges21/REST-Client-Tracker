@@ -98,6 +98,11 @@ class ClientDatabase extends Dexie {
             }
           })
       })
+    this.version(6).stores({
+      clients: '&id, username, fullName, updatedAt',
+      appointments: '&id, username, clientId, date',
+      completedJobs: '&id, username, date, clientId',
+    })
   }
 }
 
