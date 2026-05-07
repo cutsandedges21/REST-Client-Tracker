@@ -20,10 +20,12 @@ import { SettingsGear, type SettingsView } from './components/SettingsGear'
 import { ThemePage } from './pages/ThemePage'
 import { EmailPage } from './pages/EmailPage'
 import { AccountPage } from './pages/AccountPage'
+import { UpgradePage } from './pages/UpgradePage'
 import { reminderScheduler } from './services/reminderScheduler'
 import { emailService } from './services/emailService.js'
 import { getDashboardMetrics } from './lib/finance'
 import { colorThemes, type ColorTheme } from './lib/colorThemes'
+import { getPlan, type PlanId } from './lib/plans'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
@@ -92,6 +94,7 @@ function App() {
     searchTerm,
     viewMode,
     username,
+    plan,
     initialize,
     addClient,
     updateClient,
@@ -106,6 +109,10 @@ function App() {
     completedJobs,
     addCompletedJob,
   } = useClientStore()
+
+  const currentPlan = getPlan(plan)
+  const atClientLimit =
+    currentPlan.clientLimit !== null && clients.length >= currentPlan.clientLimit
 
   useEffect(() => {
     const init = async () => {
@@ -268,6 +275,11 @@ function App() {
     toast.success('Job Completed Successfully')
   }
 
+  const handleUpgrade = (planId: PlanId) => {
+    if (planId === plan) return
+    toast.info('Stripe checkout coming soon')
+  }
+
   if (!isAuthenticated) {
     return <LoginScreen onLogin={handleLogin} />
   }
@@ -293,6 +305,12 @@ function App() {
         <EmailPage username={username} onBack={() => setView('main')} />
       ) : view === 'account' ? (
         <AccountPage username={username} onSignOut={handleLogout} onBack={() => setView('main')} />
+      ) : view === 'upgrade' ? (
+        <UpgradePage
+          currentPlan={plan}
+          onUpgrade={handleUpgrade}
+          onBack={() => setView('main')}
+        />
       ) : (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
           <header className="relative overflow-hidden flex flex-col items-center gap-8 py-14 md:py-20 -top-8 px-8"
@@ -339,12 +357,17 @@ function App() {
           <ProfitChart completedJobs={completedJobs} />
           <DashboardStats {...metrics} />
           <OneTimeTasks onTasksChange={setOneTimeTasks} onExpensesChange={setExpenses} username={username} />
-          <ClientForm onSubmit={addClient} onSchedule={async (clientId, date, time) => {
-            const result = await addAppointment({ clientId, date, time })
-            if (!result.ok) {
-              toast.error((result as { ok: false; reason: string }).reason)
-            }
-          }} />
+          <ClientForm
+            onSubmit={addClient}
+            onSchedule={async (clientId, date, time) => {
+              const result = await addAppointment({ clientId, date, time })
+              if (!result.ok) {
+                toast.error((result as { ok: false; reason: string }).reason)
+              }
+            }}
+            atLimit={atClientLimit}
+            onUpgradeRequired={() => setView('upgrade')}
+          />
 
           <GlowCard>
             <div className="p-4 md:p-5">
@@ -422,7 +445,14 @@ function App() {
         preselectedClientId={preselectedClientId}
       />
 
-      {isLoaded && <SettingsGear currentView={view} onNavigate={setView} />}
+      {isLoaded && (
+        <SettingsGear
+          currentView={view}
+          onNavigate={setView}
+          plan={plan}
+          username={username}
+        />
+      )}
     </main>
   )
 }

@@ -3,6 +3,33 @@ import type { Client, ClientFormInput, ScheduledSlot, ServiceFrequency } from '.
 import type { CompletedJob } from '../types/completedJob'
 import { db } from './db'
 import { emailService } from '../services/emailService.js'
+import type { PlanId } from '../lib/plans'
+
+const PLANS_STORAGE_KEY = 'userPlans'
+
+function readStoredPlan(username: string | null): PlanId {
+  if (!username) return 'free'
+  try {
+    const raw = localStorage.getItem(PLANS_STORAGE_KEY)
+    if (!raw) return 'free'
+    const map = JSON.parse(raw) as Record<string, PlanId>
+    const stored = map[username]
+    return stored === 'pro' || stored === 'enterprise' || stored === 'free' ? stored : 'free'
+  } catch {
+    return 'free'
+  }
+}
+
+function writeStoredPlan(username: string, plan: PlanId): void {
+  try {
+    const raw = localStorage.getItem(PLANS_STORAGE_KEY)
+    const map = raw ? (JSON.parse(raw) as Record<string, PlanId>) : {}
+    map[username] = plan
+    localStorage.setItem(PLANS_STORAGE_KEY, JSON.stringify(map))
+  } catch (error) {
+    console.error('[ERROR] Failed to persist plan:', error)
+  }
+}
 
 type ViewMode = 'cards' | 'table'
 
@@ -41,6 +68,7 @@ function normalizeClient(raw: Record<string, unknown>): Client {
 
 interface ClientState {
   username: string | null
+  plan: PlanId
   clients: Client[]
   appointments: ScheduledSlot[]
   completedJobs: CompletedJob[]
@@ -48,6 +76,7 @@ interface ClientState {
   searchTerm: string
   viewMode: ViewMode
   setUsername: (username: string) => void
+  setPlan: (plan: PlanId) => void
   initialize: () => Promise<void>
   addClient: (data: ClientFormInput) => Promise<string>
   updateClient: (id: string, data: ClientFormInput) => Promise<void>
@@ -84,13 +113,20 @@ function slotConflict(
 
 export const useClientStore = create<ClientState>((set, get) => ({
   username: null,
+  plan: 'free',
   clients: [],
   appointments: [],
   completedJobs: [],
   isLoaded: false,
   searchTerm: '',
   viewMode: 'cards',
-  setUsername: (username) => set({ username, isLoaded: false }),
+  setUsername: (username) =>
+    set({ username, plan: readStoredPlan(username), isLoaded: false }),
+  setPlan: (plan) => {
+    const username = get().username
+    if (username) writeStoredPlan(username, plan)
+    set({ plan })
+  },
   initialize: async () => {
     if (get().isLoaded) return
     const username = get().username
@@ -101,7 +137,13 @@ export const useClientStore = create<ClientState>((set, get) => ({
       const clients = rawClients.map((c) => normalizeClient(c as unknown as Record<string, unknown>))
       const appointments = await db.appointments.where('username').equals(username).toArray()
       const completedJobs = await db.completedJobs.where('username').equals(username).toArray()
-      set({ clients, appointments, completedJobs, isLoaded: true })
+      set({
+        clients,
+        appointments,
+        completedJobs,
+        plan: readStoredPlan(username),
+        isLoaded: true,
+      })
     } catch (error) {
       console.error('[ERROR] Failed to initialize:', error)
       throw error

@@ -10,12 +10,14 @@ import { GlowCard } from './GlowCard'
 interface ClientFormProps {
   onSubmit: (values: ClientSchema) => Promise<string>
   onSchedule?: (clientId: string, date: string, time: string) => Promise<void>
+  atLimit?: boolean
+  onUpgradeRequired?: () => void
 }
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]'
 
-export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
+export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeRequired }: ClientFormProps) {
   const [timeUnit, setTimeUnit] = useState<'minutes' | 'hours'>('minutes')
   const [scheduleClient, setScheduleClient] = useState(false)
   const [scheduleDate, setScheduleDate] = useState('')
@@ -75,6 +77,23 @@ export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
           <p className="mt-1 text-sm text-slate-600">
             Frequency and rate are used to estimate your monthly total. Phone and email are optional.
           </p>
+
+          {atLimit && (
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <span className="mt-0.5 text-base">⚡</span>
+              <div className="flex-1">
+                You've hit the 3-client limit on the Free plan.{' '}
+                <button
+                  type="button"
+                  onClick={onUpgradeRequired}
+                  className="font-semibold underline underline-offset-2 hover:text-amber-700"
+                >
+                  Upgrade to Pro
+                </button>{' '}
+                for unlimited clients.
+              </div>
+            </div>
+          )}
 
           <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(submit)}>
             <label className="space-y-1.5">
@@ -229,16 +248,27 @@ export function ClientForm({ onSubmit, onSchedule }: ClientFormProps) {
             </div>
 
             <div className="md:col-span-2">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70"
-                style={{ backgroundColor: `rgb(var(--color-primary))` }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
-              >
-                {isSubmitting ? 'Saving...' : 'Add Client'}
-              </button>
+              {atLimit ? (
+                <button
+                  type="button"
+                  onClick={onUpgradeRequired}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white opacity-80 transition hover:opacity-100"
+                  style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                >
+                  Upgrade to add more clients
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70"
+                  style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
+                >
+                  {isSubmitting ? 'Saving...' : 'Add Client'}
+                </button>
+              )}
             </div>
           </form>
         </div>
