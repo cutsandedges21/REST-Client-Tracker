@@ -27,9 +27,10 @@ export function getDateRange(timeRange: TimeRange): { start: Date; end: Date } {
 
 export function filterJobsByDateRange(jobs: CompletedJob[], timeRange: TimeRange): CompletedJob[] {
   const { start, end } = getDateRange(timeRange)
+  const startDateStr = start.toISOString().split('T')[0]
+  const endDateStr = end.toISOString().split('T')[0]
   return jobs.filter((job) => {
-    const jobDate = new Date(job.date)
-    return jobDate >= start && jobDate <= end
+    return job.date >= startDateStr && job.date <= endDateStr
   })
 }
 
