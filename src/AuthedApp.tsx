@@ -1,4 +1,5 @@
-import React, { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Search } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
@@ -10,12 +11,12 @@ import { DeleteConfirmDialog } from './components/DeleteConfirmDialog'
 import { EarningsChart } from './components/EarningsChart'
 import { GlowCard } from './components/GlowCard'
 import { ScheduleCalendar } from './components/ScheduleCalendar'
-import { LoginScreen } from './components/LoginScreen'
 import { OneTimeTasks } from './components/OneTimeTasks'
 import { AllTimeStats } from './components/AllTimeStats'
 import { ProfitChart } from './components/ProfitChart'
 import { CompleteJobDialog } from './components/CompleteJobDialog'
 import { AnimatedBackground } from './components/AnimatedBackground'
+import { RestMark } from './components/RestMark'
 import { SettingsGear, type SettingsView } from './components/SettingsGear'
 import { ThemePage } from './pages/ThemePage'
 import { EmailPage } from './pages/EmailPage'
@@ -24,61 +25,15 @@ import { UpgradePage } from './pages/UpgradePage'
 import { reminderScheduler } from './services/reminderScheduler'
 import { emailService } from './services/emailService.js'
 import { getDashboardMetrics } from './lib/finance'
-import { colorThemes, type ColorTheme } from './lib/colorThemes'
+import { useTheme } from './contexts/ThemeContext'
 import { getPlan, type PlanId } from './lib/plans'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
 
-class ErrorBoundary extends React.Component<
-  { children: ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: ReactNode }) {
-    super(props)
-    this.state = { hasError: false, error: null }
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    console.error('[ERROR BOUNDARY] Caught error:', error)
-    return { hasError: true, error }
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ERROR BOUNDARY] Error details:', error, errorInfo)
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-red-50 p-4">
-          <div className="max-w-md rounded-lg border border-red-200 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-semibold text-red-800">Something went wrong</h2>
-            <p className="mb-4 text-sm text-red-600">
-              The application encountered an error. Please check the browser console for details.
-            </p>
-            <p className="mb-4 text-xs font-mono text-red-700">
-              Error: {this.state.error?.message || 'Unknown error'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-            >
-              Reload Page
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    return this.props.children
-  }
-}
-
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-  const [colorTheme, setColorTheme] = useState<ColorTheme>('purple')
+export function AuthedApp() {
+  const navigate = useNavigate()
+  const { theme, colorTheme, setTheme, setColorTheme } = useTheme()
   const [view, setView] = useState<SettingsView>('main')
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
@@ -119,22 +74,11 @@ function App() {
       try {
         await initialize()
       } catch (error) {
-        console.error('[ERROR] App useEffect - initialize failed:', error)
+        console.error('[ERROR] AuthedApp useEffect - initialize failed:', error)
       }
     }
     void init()
   }, [initialize, username])
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-  }, [theme])
-
-  useEffect(() => {
-    const selectedTheme = colorThemes[colorTheme]
-    document.documentElement.style.setProperty('--color-primary', selectedTheme.rgb.primary)
-    document.documentElement.style.setProperty('--color-primary-light', selectedTheme.rgb.primaryLight)
-    document.documentElement.style.setProperty('--color-primary-dark', selectedTheme.rgb.primaryDark)
-  }, [colorTheme])
 
   useEffect(() => {
     if (isLoaded) {
@@ -184,7 +128,6 @@ function App() {
     return client.cutDurationMinutes * (frequencyMultipliers[client.serviceFrequency] || 1)
   }
 
-  // Calculate all-time totals
   const allTimeStats = useMemo(() => {
     const regularEarnings = filteredClients.reduce((sum, client) => {
       const monthlyEarnings = getMonthlyEarnings(client)
@@ -202,7 +145,6 @@ function App() {
     const oneTimeTime = oneTimeTasks.reduce((sum, task) => sum + task.timeSpent, 0)
     const totalTime = regularTime + oneTimeTime
 
-    // Calculate regular client expenses (expensePerClient × frequency)
     const regularExpenses = filteredClients.reduce((sum, client) => {
       const frequencyMultipliers: Record<string, number> = {
         weekly: 4.33,
@@ -244,17 +186,11 @@ function App() {
     toast.success('Client Updated Successfully')
   }
 
-  const handleLogin = (username: string) => {
-    setUsername(username)
-    emailService.setUsername(username)
-    setIsAuthenticated(true)
-  }
-
   const handleLogout = () => {
     localStorage.removeItem('userAuth')
-    setIsAuthenticated(false)
-    setUsername(null)
+    setUsername(null as unknown as string)
     setView('main')
+    navigate('/', { replace: true })
   }
 
   const handleCompleteJob = (client?: Client) => {
@@ -278,10 +214,6 @@ function App() {
   const handleUpgrade = (planId: PlanId) => {
     if (planId === plan) return
     toast.info('Stripe checkout coming soon')
-  }
-
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} />
   }
 
   return (
@@ -313,42 +245,24 @@ function App() {
         />
       ) : (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-          <header className="relative overflow-hidden flex flex-col items-center gap-8 py-14 md:py-20 -top-8 px-8"
-          >
-
-            {/* soft glow behind the letters */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none"
-              style={{ background: "radial-gradient(ellipse, rgb(var(--color-primary-dark), 0.18) 0%, transparent 70%)" }} />
-
-            <div className="flex items-end">
-              {[
-                { letter: "R", word: "Revenue" },
-                { letter: "E", word: "Email" },
-                { letter: "S", word: "Schedule" },
-                { letter: "T", word: "Track" },
-              ].map((item, i, arr) => (
-                <div key={item.letter}
-                  className="relative flex flex-col items-center gap-2.5 px-5 md:px-7"
-                  style={i < arr.length - 1 ? {
-                    borderRight: "1px solid rgb(var(--color-primary-dark))"
-                  } : {}}>
-                  <span className="text-7xl md:text-8xl font-extrabold leading-none tracking-tight"
-                    style={{ color: `rgb(var(--color-primary-dark))`, textShadow: "0 0 40px rgb(var(--color-primary-dark), 0.35)" }}>
-                    {item.letter}
-                  </span>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-                    style={{ color: `rgb(var(--color-primary-dark))` }}>
-                    {item.word}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] rounded-full px-5 py-1.5"
+          <header className="relative overflow-hidden flex flex-col items-center gap-8 py-14 md:py-20 -top-8 px-8">
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none"
               style={{
-                color: "rgb(var(--color-primary-dark))",
-                border: "1px solid rgb(var(--color-primary-dark))"
-              }}>
+                background:
+                  'radial-gradient(ellipse, rgb(var(--color-primary-dark), 0.18) 0%, transparent 70%)',
+              }}
+            />
+
+            <RestMark size="lg" animate />
+
+            <span
+              className="text-[11px] font-semibold uppercase tracking-[0.18em] rounded-full px-5 py-1.5"
+              style={{
+                color: 'rgb(var(--color-primary-dark))',
+                border: '1px solid rgb(var(--color-primary-dark))',
+              }}
+            >
               Client Tracker
             </span>
           </header>
@@ -356,7 +270,11 @@ function App() {
           <AllTimeStats {...allTimeStats} />
           <ProfitChart completedJobs={completedJobs} />
           <DashboardStats {...metrics} />
-          <OneTimeTasks onTasksChange={setOneTimeTasks} onExpensesChange={setExpenses} username={username} />
+          <OneTimeTasks
+            onTasksChange={setOneTimeTasks}
+            onExpensesChange={setExpenses}
+            username={username}
+          />
           <ClientForm
             onSubmit={addClient}
             onSchedule={async (clientId, date, time) => {
@@ -470,19 +388,12 @@ function ToggleButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${active ? 'text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-        }`}
+      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+        active ? 'text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+      }`}
       style={active ? { backgroundColor: `var(--color-primary)` } : {}}
     >
       {children}
     </button>
-  )
-}
-
-export default function AppWrapper() {
-  return (
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
   )
 }

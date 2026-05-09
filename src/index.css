@@ -12,12 +12,12 @@
   -moz-osx-font-smoothing: grayscale;
 
   /* Color theme variables */
-  --color-primary: 139, 92, 246;
-  /* violet RGB */
-  --color-primary-light: 245, 243, 255;
-  /* violet-50 RGB */
-  --color-primary-dark: 124, 58, 237;
-  /* violet-700 RGB */
+  --color-primary: 59, 130, 246;
+  /* blue-500 RGB */
+  --color-primary-light: 239, 246, 255;
+  /* blue-50 RGB */
+  --color-primary-dark: 29, 78, 216;
+  /* blue-700 RGB */
 
   /* Text color variables */
   --color-text-primary: #0f172a;

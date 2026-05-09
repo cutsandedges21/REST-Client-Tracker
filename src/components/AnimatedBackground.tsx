@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 
 export function AnimatedBackground() {
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden bg-slate-50 dark:bg-[#09090b] transition-colors duration-700">
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-slate-50 dark:bg-[#09090b] transition-colors duration-700">
       {/* Base theme tint & gradients */}
       <div className="absolute inset-0 bg-[rgba(var(--color-primary),0.05)] dark:bg-[rgba(var(--color-primary),0.08)]" />
       <div className="absolute inset-0 bg-gradient-to-tr from-[rgba(var(--color-primary),0.08)] via-transparent to-[rgba(var(--color-primary),0.05)] dark:from-[rgba(var(--color-primary),0.12)] dark:to-[rgba(var(--color-primary),0.07)]" />

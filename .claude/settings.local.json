@@ -11,7 +11,15 @@
       "mcp__plugin_playwright_playwright__browser_hover",
       "mcp__plugin_playwright_playwright__browser_resize",
       "mcp__plugin_playwright_playwright__browser_close",
-      "Bash(kill %1)"
+      "Bash(kill %1)",
+      "Bash(git -C \"C:/Users/sport/OneDrive/Documents/CodingPersonal/client-tracker-app\" add docs/superpowers/specs/2026-05-08-marketing-homepage-design.md)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/react-router-dom/package.json'\\).version\\); console.log\\(require\\('./node_modules/gsap/package.json'\\).version\\); console.log\\(require\\('./node_modules/@gsap/react/package.json'\\).version\\)\")",
+      "Bash(echo \"EXITCODE=$?\")",
+      "Bash(echo \"PID=$!\" sleep 8 cat /tmp/vite.log)",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "Bash(rm -f v*.png post-register.png authed-app.png signup-screen.png landing-while-authed.png login-screen.png)",
+      "Bash(rm -rf .playwright-mcp)",
+      "Bash(pkill -f \"vite\")"
     ]
   }
 }

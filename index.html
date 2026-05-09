@@ -7,19 +7,44 @@
   <title>REST | Client Management</title>
 
   <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="/Rounded/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/Rounded/favicon-16x16.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/Rounded/favicon-32x32.png" />
+  <link rel="icon" type="image/x-icon" href="/RoundedBlue/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/RoundedBlue/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/RoundedBlue/favicon-32x32.png" />
 
   <!-- Apple Touch Icon -->
-  <link rel="apple-touch-icon" sizes="180x180" href="/Rounded/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/RoundedBlue/apple-touch-icon.png" />
 
   <!-- Android Chrome -->
-  <link rel="icon" type="image/png" sizes="192x192" href="/Rounded/android-chrome-192x192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/Rounded/android-chrome-512x512.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/RoundedBlue/android-chrome-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/RoundedBlue/android-chrome-512x512.png" />
 
   <!-- Web Manifest -->
-  <link rel="manifest" href="/Rounded/site.webmanifest" />
+  <link rel="manifest" href="/RoundedBlue/site.webmanifest" />
+
+  <!-- Theme + color-theme bootstrap (prevents flash of wrong theme) -->
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('rest-theme');
+        document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+
+        var COLORS = {
+          purple: { p: '139, 92, 246', l: '245, 243, 255', d: '124, 58, 237' },
+          green: { p: '16, 185, 129', l: '236, 253, 245', d: '4, 120, 87' },
+          red: { p: '244, 63, 94', l: '255, 241, 242', d: '190, 18, 60' },
+          blue: { p: '59, 130, 246', l: '239, 246, 255', d: '29, 78, 216' },
+          orange: { p: '249, 115, 22', l: '255, 247, 237', d: '194, 65, 12' },
+          white: { p: '100, 116, 139', l: '248, 250, 252', d: '51, 65, 85' }
+        };
+        var stored = localStorage.getItem('rest-color-theme');
+        var palette = COLORS[stored] || COLORS.blue;
+        var s = document.documentElement.style;
+        s.setProperty('--color-primary', palette.p);
+        s.setProperty('--color-primary-light', palette.l);
+        s.setProperty('--color-primary-dark', palette.d);
+      } catch (e) { }
+    })();
+  </script>
 </head>
 
 <body>

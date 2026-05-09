@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { GlowCard } from './GlowCard'
-import { LiquidAurora } from './LiquidAurora'
+import { AnimatedBackground } from './AnimatedBackground'
+import { useClientStore } from '../store/clientStore'
+import { emailService } from '../services/emailService.js'
 
-export function LoginScreen({ onLogin }) {
+export function LoginScreen({ mode = 'login' }) {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const setStoreUsername = useClientStore((s) => s.setUsername)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [isRegistering, setIsRegistering] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(mode === 'signup')
+
+  useEffect(() => {
+    setIsRegistering(mode === 'signup')
+  }, [mode])
 
   useEffect(() => {
     // Initialize admin accounts if they don't exist
@@ -19,13 +29,15 @@ export function LoginScreen({ onLogin }) {
     }
     localStorage.setItem('users', JSON.stringify(users))
 
-    // Check if already logged in
+    // If already logged in, send to /app
     const auth = localStorage.getItem('userAuth')
     if (auth) {
       try {
         const { username: storedUsername, expiry } = JSON.parse(auth)
-        if (expiry && Date.now() < expiry) {
-          onLogin(storedUsername)
+        if (expiry && Date.now() < expiry && storedUsername) {
+          setStoreUsername(storedUsername)
+          emailService.setUsername(storedUsername)
+          navigate('/app', { replace: true })
         } else {
           localStorage.removeItem('userAuth')
         }
@@ -33,7 +45,7 @@ export function LoginScreen({ onLogin }) {
         localStorage.removeItem('userAuth')
       }
     }
-  }, [onLogin])
+  }, [navigate, setStoreUsername])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -65,7 +77,10 @@ export function LoginScreen({ onLogin }) {
           expiry: Date.now() + 7 * 24 * 60 * 60 * 1000
         }
         localStorage.setItem('userAuth', JSON.stringify(auth))
-        onLogin(username)
+        setStoreUsername(username)
+        emailService.setUsername(username)
+        const planParam = searchParams.get('plan')
+        navigate(planParam ? `/app?plan=${planParam}` : '/app', { replace: true })
       } else {
         setError('Invalid username or password')
       }
@@ -73,8 +88,14 @@ export function LoginScreen({ onLogin }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 relative overflow-hidden bg-[#0a0418]">
-      <LiquidAurora />
+    <div className="flex min-h-screen items-center justify-center px-4 relative overflow-hidden">
+      <AnimatedBackground />
+      <Link
+        to="/"
+        className="absolute top-6 left-6 z-20 rounded-full border border-white/30 bg-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 backdrop-blur-md transition hover:bg-white/40 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
+      >
+        ← Back to home
+      </Link>
       <div className="relative z-10 w-full flex justify-center">
         <GlowCard>
         <div className="w-full max-w-md p-6 md:p-8">

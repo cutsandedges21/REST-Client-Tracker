@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useAnimationControls } from 'framer-motion'
 import { Settings, Palette, Mail, User, CreditCard } from 'lucide-react'
 import { getPlan, type PlanId } from '../lib/plans'
 
@@ -28,8 +28,9 @@ const PANEL_OPTIONS: PanelOption[] = [
 export function SettingsGear({ currentView, onNavigate, plan, username }: SettingsGearProps) {
   const [panelOpen, setPanelOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
-  const [spinKey, setSpinKey] = useState(0)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const desktopSpinControls = useAnimationControls()
+  const mobileSpinControls = useAnimationControls()
 
   const planName = getPlan(plan).name
   const userLabel = username ? `@${username}` : ''
@@ -46,8 +47,21 @@ export function SettingsGear({ currentView, onNavigate, plan, username }: Settin
     return () => document.removeEventListener('mousedown', handleClick)
   }, [panelOpen])
 
+  const triggerSpin = () => {
+    desktopSpinControls.set({ rotate: 0 })
+    mobileSpinControls.set({ rotate: 0 })
+    void desktopSpinControls.start({
+      rotate: 360,
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+    })
+    void mobileSpinControls.start({
+      rotate: 360,
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+    })
+  }
+
   const handleGearClick = () => {
-    setSpinKey((k) => k + 1)
+    triggerSpin()
     if (currentView !== 'main') {
       onNavigate('main')
       setPanelOpen(false)
@@ -117,33 +131,30 @@ export function SettingsGear({ currentView, onNavigate, plan, username }: Settin
         onClick={handleGearClick}
         aria-label="Open settings"
         layout
-        animate={{
-          width: showExpandedDesktop ? 'auto' : 48,
-          paddingLeft: showExpandedDesktop ? 14 : 0,
-          paddingRight: showExpandedDesktop ? 18 : 0,
-        }}
-        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-        className="hidden h-12 items-center justify-center gap-2.5 overflow-hidden rounded-full border border-slate-300 bg-white shadow-md transition hover:bg-slate-50 md:inline-flex"
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        className="hidden h-12 items-center overflow-hidden rounded-full border border-slate-300 bg-white shadow-md transition hover:bg-slate-50 md:inline-flex"
         style={{ color: `rgb(var(--color-primary-dark))` }}
       >
-        <motion.span
-          key={spinKey}
-          initial={{ rotate: 0 }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="flex shrink-0"
-        >
-          <Settings className="h-5 w-5" />
-        </motion.span>
+        {/* Fixed-size icon container — gear stays centered regardless of label state */}
+        <span className="grid h-12 w-12 shrink-0 place-items-center">
+          <motion.span
+            animate={desktopSpinControls}
+            initial={{ rotate: 0 }}
+            className="flex h-5 w-5 items-center justify-center"
+          >
+            <Settings className="h-5 w-5" />
+          </motion.span>
+        </span>
         <AnimatePresence initial={false}>
           {showExpandedDesktop && (
             <motion.span
               key="label"
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -4 }}
-              transition={{ duration: 0.18 }}
-              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-semibold"
+              layout
+              initial={{ opacity: 0, width: 0, marginRight: 0 }}
+              animate={{ opacity: 1, width: 'auto', marginRight: 16 }}
+              exit={{ opacity: 0, width: 0, marginRight: 0 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="flex shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-semibold"
             >
               <span
                 className="uppercase tracking-[0.14em]"
@@ -167,15 +178,13 @@ export function SettingsGear({ currentView, onNavigate, plan, username }: Settin
         type="button"
         onClick={handleGearClick}
         aria-label="Open settings"
-        className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-300 bg-white shadow-md transition hover:bg-slate-50 md:hidden"
+        className="grid h-12 w-12 place-items-center rounded-full border border-slate-300 bg-white shadow-md transition hover:bg-slate-50 md:hidden"
         style={{ color: `rgb(var(--color-primary-dark))` }}
       >
         <motion.span
-          key={`mobile-${spinKey}`}
+          animate={mobileSpinControls}
           initial={{ rotate: 0 }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="flex"
+          className="flex h-5 w-5 items-center justify-center"
         >
           <Settings className="h-5 w-5" />
         </motion.span>
