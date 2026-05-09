@@ -19,7 +19,8 @@
       "mcp__plugin_playwright_playwright__browser_fill_form",
       "Bash(rm -f v*.png post-register.png authed-app.png signup-screen.png landing-while-authed.png login-screen.png)",
       "Bash(rm -rf .playwright-mcp)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(grep -q \"^.env$\" .gitignore)"
     ]
   }
 }

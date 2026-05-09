@@ -26,7 +26,7 @@ const itemVariants: Variants = {
 export function Hero() {
   const [titleNumber, setTitleNumber] = useState(0)
   const titles = useMemo(
-    () => ['clients', 'cuts', 'revenue', 'routes', 'reminders'],
+    () => ['clients', 'jobs', 'revenue', 'invoices', 'reminders'],
     [],
   )
 
@@ -66,9 +66,9 @@ export function Hero() {
                     titleNumber === index
                       ? { y: 0, opacity: 1 }
                       : {
-                          y: titleNumber > index ? -150 : 150,
-                          opacity: 0,
-                        }
+                        y: titleNumber > index ? -150 : 150,
+                        opacity: 0,
+                      }
                   }
                 >
                   {title}
@@ -81,8 +81,8 @@ export function Hero() {
             variants={itemVariants}
             className="max-w-2xl text-center text-lg leading-relaxed tracking-tight text-slate-600 dark:text-slate-300 md:text-xl"
           >
-            REST is the all-in-one client tracker for solo trades. Track every cut, schedule
-            every job, send every reminder, and watch your revenue grow — without the
+            REST is the all-in-one client tracker for solo trades. Track every job, schedule
+            every client, send every reminder, and watch your revenue grow, all without the
             spreadsheet chaos.
           </motion.p>
 
@@ -130,7 +130,7 @@ export function Hero() {
             variants={itemVariants}
             className="text-xs text-slate-500 dark:text-slate-400"
           >
-            No credit card required · Free forever for up to 3 clients
+            Manage your clients with ease · Free forever for up to 3 clients
           </motion.p>
         </motion.div>
       </div>

@@ -24,7 +24,7 @@ const FEATURES: Feature[] = [
     label: 'Revenue',
     headlineLines: ['Know what you\'re actually', 'earning.'],
     body:
-      'Per-cut rates, recurring frequencies, expenses, and one-time tasks all roll up into a live monthly profit number. No more guessing.',
+      'Per-service rates, recurring frequencies, expenses, and one-time tasks all roll up into a live monthly profit number. No more guessing.',
     mockup: <RevenueMockup />,
     background:
       'linear-gradient(135deg, rgb(var(--color-primary-dark)) 0%, rgb(var(--color-primary)) 100%)',
@@ -44,9 +44,9 @@ const FEATURES: Feature[] = [
     id: 'schedule',
     letter: 'S',
     label: 'Schedule',
-    headlineLines: ['A calendar built for the', 'route, not the office.'],
+    headlineLines: ['A calendar built for the road,', 'not the office.'],
     body:
-      'Drag, drop, reschedule. Conflicts caught automatically. Recurring jobs auto-populate the week so your route plans itself.',
+      'Clean layout and simple visuals. Conflicts caught automatically. Recurring jobs auto-populate the week so your route plans itself.',
     mockup: <ScheduleMockup />,
     background:
       'linear-gradient(135deg, rgb(var(--color-primary-dark)) 0%, rgb(var(--color-primary)) 100%)',
@@ -55,9 +55,9 @@ const FEATURES: Feature[] = [
     id: 'track',
     letter: 'T',
     label: 'Track',
-    headlineLines: ['Every client. Every detail.', 'Always with you.'],
+    headlineLines: ['Every client', 'Every detail.'],
     body:
-      'Contact info, addresses, service history, notes, and per-client profitability — searchable in a tap, on any device.',
+      'Contact info, addresses, service history, notes, and per-client profitability All searchable in a tap, on any device.',
     mockup: <TrackMockup />,
     background:
       'linear-gradient(135deg, rgb(var(--color-primary)) 0%, rgb(var(--color-primary-dark)) 100%)',

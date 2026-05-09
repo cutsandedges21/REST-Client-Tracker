@@ -12,7 +12,7 @@ import { LandingFooter } from '../components/landing/LandingFooter'
 
 export function Landing() {
   useEffect(() => {
-    document.title = 'REST · Client management for solo trades'
+    document.title = 'REST | Client Management'
   }, [])
 
   return (

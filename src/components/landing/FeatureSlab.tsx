@@ -59,7 +59,7 @@ export function FeatureSlab() {
           viewport={{ once: true, margin: '-10% 0px' }}
           transition={{ duration: 0.55, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
         >
-          Four letters. One workflow. Built for solo operators who'd rather be on the
+          Four letters. One workflow. Built for business owners who'd rather be on the
           job than in front of a spreadsheet.
         </motion.p>
       </div>

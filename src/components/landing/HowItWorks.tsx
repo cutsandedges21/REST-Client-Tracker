@@ -17,7 +17,7 @@ const STEPS = [
   },
   {
     number: '03',
-    title: 'Get paid, see the math',
+    title: 'Get paid, see it work',
     body: 'Complete jobs in one tap. Watch profit, hours, and expenses roll into a live dashboard.',
     icon: DollarSign,
   },
