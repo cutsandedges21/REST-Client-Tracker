@@ -23,7 +23,7 @@ export function Landing() {
       <Hero />
       <FeatureSlab />
       <LandingFlow />
-      <div className="h-[12vh]" />
+      <div className="h-8 md:h-[12vh]" />
       <HowItWorks />
       <LandingPricing />
       <FinalCTA />

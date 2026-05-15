@@ -82,8 +82,8 @@ export function LandingFlow() {
 
 function FlowSectionContent({ feature }: { feature: Feature }) {
   return (
-    <div className="flex w-full flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
-      <div className="flex max-w-xl flex-col gap-6">
+    <div className="flex w-full flex-col items-center gap-8 sm:gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
+      <div className="flex w-full max-w-xl flex-col gap-4 sm:gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -102,7 +102,7 @@ function FlowSectionContent({ feature }: { feature: Feature }) {
           </span>
         </motion.div>
 
-        <h3 className="text-4xl font-bold leading-tight tracking-tight text-white md:text-6xl">
+        <h3 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-6xl">
           <motion.span
             className="block"
             initial={{ opacity: 0, y: 24 }}
@@ -124,7 +124,7 @@ function FlowSectionContent({ feature }: { feature: Feature }) {
         </h3>
 
         <motion.p
-          className="text-base leading-relaxed text-white/85 md:text-lg"
+          className="text-sm leading-relaxed text-white/85 sm:text-base md:text-lg"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-20% 0px' }}
@@ -135,7 +135,7 @@ function FlowSectionContent({ feature }: { feature: Feature }) {
       </div>
 
       <motion.div
-        className="flex w-full max-w-md items-center justify-center lg:max-w-lg"
+        className="flex w-full max-w-sm items-center justify-center sm:max-w-md lg:max-w-lg"
         initial={{ opacity: 0, scale: 0.96 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true, margin: '-20% 0px' }}

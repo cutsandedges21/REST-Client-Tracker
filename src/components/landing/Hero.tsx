@@ -38,22 +38,22 @@ export function Hero() {
   }, [titleNumber, titles])
 
   return (
-    <section className="relative w-full pt-20 md:pt-24">
-      <div className="container mx-auto px-4">
+    <section className="relative w-full pt-16 sm:pt-20 md:pt-24">
+      <div className="container mx-auto px-4 sm:px-6">
         <motion.div
-          className="flex flex-col items-center justify-center gap-7 py-8 md:py-12"
+          className="flex flex-col items-center justify-center gap-5 py-6 sm:gap-7 sm:py-8 md:py-12"
           variants={containerVariants}
           initial="hidden"
           animate="show"
         >
           <motion.h1
             variants={itemVariants}
-            className="max-w-3xl text-center text-5xl font-medium tracking-tighter md:text-7xl"
+            className="max-w-3xl text-center text-3xl font-medium tracking-tighter sm:text-5xl md:text-7xl"
           >
             <span style={{ color: 'rgb(var(--color-primary-dark))' }}>
               The smarter way to manage
             </span>
-            <span className="relative flex w-full justify-center overflow-hidden text-center md:pb-4 md:pt-1">
+            <span className="relative flex w-full justify-center overflow-hidden text-center pt-1 pb-2 md:pb-4">
               &nbsp;
               {titles.map((title, index) => (
                 <motion.span
@@ -79,7 +79,7 @@ export function Hero() {
 
           <motion.p
             variants={itemVariants}
-            className="max-w-2xl text-center text-lg leading-relaxed tracking-tight text-slate-600 dark:text-slate-300 md:text-xl"
+            className="max-w-2xl text-center text-base leading-relaxed tracking-tight text-slate-600 dark:text-slate-300 sm:text-lg md:text-xl"
           >
             REST is the all-in-one client tracker for solo trades. Track every job, schedule
             every client, send every reminder, and watch your revenue grow, all without the
@@ -88,7 +88,7 @@ export function Hero() {
 
           <motion.div
             variants={itemVariants}
-            className="flex flex-col items-stretch gap-3 sm:flex-row"
+            className="flex w-full max-w-sm flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:flex-row"
           >
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
               <a

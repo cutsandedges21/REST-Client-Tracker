@@ -23,9 +23,9 @@ import { EmailPage } from './pages/EmailPage'
 import { AccountPage } from './pages/AccountPage'
 import { UpgradePage } from './pages/UpgradePage'
 import { reminderScheduler } from './services/reminderScheduler'
-import { emailService } from './services/emailService.js'
 import { getDashboardMetrics } from './lib/finance'
 import { useTheme } from './contexts/ThemeContext'
+import { useAuth } from './contexts/AuthContext'
 import { getPlan, type PlanId } from './lib/plans'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
@@ -34,6 +34,7 @@ import { useClientStore } from './store/clientStore'
 export function AuthedApp() {
   const navigate = useNavigate()
   const { theme, colorTheme, setTheme, setColorTheme } = useTheme()
+  const { user, profile, signOut } = useAuth()
   const [view, setView] = useState<SettingsView>('main')
   const [pendingDelete, setPendingDelete] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
@@ -50,7 +51,7 @@ export function AuthedApp() {
     viewMode,
     username,
     plan,
-    initialize,
+    setAuthBundle,
     addClient,
     updateClient,
     removeClient,
@@ -60,7 +61,6 @@ export function AuthedApp() {
     removeAppointment,
     setSearchTerm,
     setViewMode,
-    setUsername,
     completedJobs,
     addCompletedJob,
   } = useClientStore()
@@ -69,16 +69,12 @@ export function AuthedApp() {
   const atClientLimit =
     currentPlan.clientLimit !== null && clients.length >= currentPlan.clientLimit
 
+  // Sync auth context -> store. Triggers initial data fetch.
   useEffect(() => {
-    const init = async () => {
-      try {
-        await initialize()
-      } catch (error) {
-        console.error('[ERROR] AuthedApp useEffect - initialize failed:', error)
-      }
+    if (user && profile) {
+      setAuthBundle({ userId: user.id, username: profile.username, plan: profile.plan })
     }
-    void init()
-  }, [initialize, username])
+  }, [user, profile, setAuthBundle])
 
   useEffect(() => {
     if (isLoaded) {
@@ -186,9 +182,9 @@ export function AuthedApp() {
     toast.success('Client Updated Successfully')
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('userAuth')
-    setUsername(null as unknown as string)
+  const handleLogout = async () => {
+    await signOut()
+    setAuthBundle(null)
     setView('main')
     navigate('/', { replace: true })
   }
@@ -217,7 +213,7 @@ export function AuthedApp() {
   }
 
   return (
-    <main className="relative min-h-screen px-4 py-8 text-slate-900 transition-colors md:px-8">
+    <main className="relative min-h-screen px-3 py-6 text-slate-900 transition-colors sm:px-4 sm:py-8 md:px-8">
       <AnimatedBackground />
       <Toaster richColors position="top-right" />
 
@@ -244,10 +240,10 @@ export function AuthedApp() {
           onBack={() => setView('main')}
         />
       ) : (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-          <header className="relative overflow-hidden flex flex-col items-center gap-8 py-14 md:py-20 -top-8 px-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:gap-6">
+          <header className="relative flex flex-col items-center gap-4 overflow-hidden px-4 py-8 sm:gap-6 sm:py-12 md:py-16">
             <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] rounded-full pointer-events-none"
+              className="pointer-events-none absolute left-1/2 top-0 h-[200px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[300px] sm:w-[500px]"
               style={{
                 background:
                   'radial-gradient(ellipse, rgb(var(--color-primary-dark), 0.18) 0%, transparent 70%)',
@@ -257,7 +253,7 @@ export function AuthedApp() {
             <RestMark size="lg" animate />
 
             <span
-              className="text-[11px] font-semibold uppercase tracking-[0.18em] rounded-full px-5 py-1.5"
+              className="rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] sm:px-5 sm:text-[11px]"
               style={{
                 color: 'rgb(var(--color-primary-dark))',
                 border: '1px solid rgb(var(--color-primary-dark))',
@@ -266,6 +262,13 @@ export function AuthedApp() {
               Client Tracker
             </span>
           </header>
+
+          <SearchHero
+            value={searchTerm}
+            onChange={setSearchTerm}
+            totalClients={clients.length}
+            visibleClients={filteredClients.length}
+          />
 
           <AllTimeStats {...allTimeStats} />
           <ProfitChart completedJobs={completedJobs} />
@@ -288,17 +291,13 @@ export function AuthedApp() {
           />
 
           <GlowCard>
-            <div className="p-4 md:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <label className="relative block sm:max-w-sm sm:flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
-                    placeholder="Search by name, phone, email, or address..."
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                  />
-                </label>
+            <div className="p-3 sm:p-4 md:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                  {filteredClients.length === clients.length
+                    ? `${clients.length} ${clients.length === 1 ? 'client' : 'clients'}`
+                    : `${filteredClients.length} of ${clients.length}`}
+                </p>
                 <div className="inline-flex rounded-xl border border-slate-300 p-1">
                   <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
                     Cards
@@ -395,5 +394,92 @@ function ToggleButton({
     >
       {children}
     </button>
+  )
+}
+
+function SearchHero({
+  value,
+  onChange,
+  totalClients,
+  visibleClients,
+}: {
+  value: string
+  onChange: (v: string) => void
+  totalClients: number
+  visibleClients: number
+}) {
+  const trimmed = value.trim()
+  const showStatus = trimmed.length > 0
+  const noMatches = showStatus && visibleClients === 0
+  const showHint = totalClients === 0
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <GlowCard>
+        <div className="p-4 sm:p-5 md:p-6">
+          <label className="block">
+            <span className="sr-only">Search clients</span>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2"
+                style={{ color: 'rgb(var(--color-primary))' }}
+              />
+              <input
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)] sm:py-4 sm:text-lg"
+                placeholder="Search by name, phone, email, or address..."
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+              />
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => onChange('')}
+                  aria-label="Clear search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <span aria-hidden className="text-xl leading-none">×</span>
+                </button>
+              )}
+            </div>
+          </label>
+
+          <AnimatePresence initial={false}>
+            {showStatus && (
+              <motion.p
+                key={noMatches ? 'no' : 'count'}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className={`mt-3 text-xs sm:text-sm ${noMatches ? 'text-rose-600' : 'text-slate-500'}`}
+              >
+                {noMatches
+                  ? `No clients match "${trimmed}".`
+                  : `Showing ${visibleClients} of ${totalClients} ${totalClients === 1 ? 'client' : 'clients'}.`}
+              </motion.p>
+            )}
+            {!showStatus && showHint && (
+              <motion.p
+                key="hint"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="mt-3 text-xs text-slate-500 sm:text-sm"
+              >
+                Add your first client below to start searching.
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+      </GlowCard>
+    </motion.div>
   )
 }

@@ -7,7 +7,7 @@ export function FeatureSlab() {
     <section
       id="features"
       aria-labelledby="features-heading"
-      className="relative w-full px-4 py-24 md:py-32"
+      className="relative w-full px-4 py-16 sm:py-24 md:py-32"
     >
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 text-center">
         <motion.span
@@ -26,7 +26,7 @@ export function FeatureSlab() {
 
         <h2
           id="features-heading"
-          className="flex flex-wrap items-end justify-center gap-2 text-5xl font-bold tracking-tighter md:text-7xl"
+          className="flex flex-wrap items-end justify-center gap-1 text-3xl font-bold tracking-tighter sm:gap-2 sm:text-5xl md:text-7xl"
           aria-label="R-E-S-T. Four letters. One workflow."
         >
           {LETTERS.map((letter, i) => (
@@ -53,7 +53,7 @@ export function FeatureSlab() {
         </h2>
 
         <motion.p
-          className="max-w-2xl text-lg text-slate-600 dark:text-slate-400 md:text-xl"
+          className="max-w-2xl text-base text-slate-600 dark:text-slate-400 sm:text-lg md:text-xl"
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-10% 0px' }}

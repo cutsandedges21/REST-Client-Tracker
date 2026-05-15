@@ -107,19 +107,33 @@ export const TrackMockup = memo(function TrackMockup() {
         </span>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <AnimatePresence mode="popLayout">
+      {/*
+        FLIP-friendly list:
+        - <motion.ul layout> is the stable parent; children animate against IT,
+          not against the entire mockup card. This stops the cards from
+          jumping into the wrong slots during enter/exit.
+        - Each child uses `layout="position"` (cheaper than full layout) and a
+          unique `layoutId` so spring transitions stay smooth across filter
+          changes.
+        - `popLayout` keeps exiting items out of the document flow so the
+          remaining items can slide in immediately rather than waiting for the
+          exit animation.
+      */}
+      <motion.ul layout className="flex min-h-[180px] flex-col gap-2">
+        <AnimatePresence mode="popLayout" initial={false}>
           {filtered.map((client) => (
-            <motion.div
+            <motion.li
               key={client.id}
-              layout
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              layout="position"
+              layoutId={`track-mockup-${client.id}`}
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{
-                type: 'spring',
-                stiffness: 280,
-                damping: 26,
+                layout: { type: 'spring', stiffness: 320, damping: 30 },
+                opacity: { duration: 0.18 },
+                y: { type: 'spring', stiffness: 320, damping: 30 },
+                scale: { duration: 0.18 },
               }}
               className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
             >
@@ -151,13 +165,20 @@ export const TrackMockup = memo(function TrackMockup() {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </motion.li>
           ))}
         </AnimatePresence>
         {filtered.length === 0 && (
-          <p className="py-4 text-center text-xs text-slate-400">No matches</p>
+          <motion.li
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="py-4 text-center text-xs text-slate-400"
+          >
+            No matches
+          </motion.li>
         )}
-      </div>
+      </motion.ul>
     </div>
   )
 })

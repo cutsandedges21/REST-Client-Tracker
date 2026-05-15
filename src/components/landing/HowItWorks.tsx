@@ -36,9 +36,9 @@ export function HowItWorks() {
       ref={ref}
       id="how"
       aria-labelledby="how-heading"
-      className="relative w-full px-4 py-28 md:py-36"
+      className="relative w-full px-4 py-16 sm:py-24 md:py-36"
     >
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-14">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 md:gap-14">
         <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
           <motion.span
             className="rounded-full border bg-white/40 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] backdrop-blur-md dark:bg-white/10"
@@ -55,7 +55,7 @@ export function HowItWorks() {
           </motion.span>
           <motion.h2
             id="how-heading"
-            className="text-4xl font-bold tracking-tighter md:text-6xl"
+            className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-6xl"
             style={{ color: 'rgb(var(--color-primary-dark))' }}
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -70,7 +70,7 @@ export function HowItWorks() {
           {STEPS.map((step, i) => (
             <motion.div
               key={step.number}
-              className="group relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-white/40 bg-white/40 p-7 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.35)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5"
+              className="group relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-white/40 bg-white/40 p-5 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-7 dark:border-white/10 dark:bg-white/5"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-10% 0px' }}

@@ -6,7 +6,7 @@ export function FinalCTA() {
   return (
     <section
       aria-labelledby="cta-heading"
-      className="relative w-full overflow-hidden px-4 py-32 md:py-40"
+      className="relative w-full overflow-hidden px-4 py-20 sm:py-28 md:py-40"
     >
       <motion.div
         aria-hidden
@@ -29,12 +29,12 @@ export function FinalCTA() {
       >
         <h2
           id="cta-heading"
-          className="text-4xl font-bold tracking-tighter md:text-7xl"
+          className="text-3xl font-bold tracking-tighter sm:text-5xl md:text-7xl"
           style={{ color: 'rgb(var(--color-primary-dark))' }}
         >
           Stop tracking clients on paper.
         </h2>
-        <p className="max-w-xl text-lg text-slate-600 dark:text-slate-400 md:text-xl">
+        <p className="max-w-xl text-base text-slate-600 dark:text-slate-400 sm:text-lg md:text-xl">
           Build your business on a real workflow. REST is free to start, no credit card,
           no risk.
         </p>

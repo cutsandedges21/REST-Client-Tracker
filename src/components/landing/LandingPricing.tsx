@@ -9,9 +9,9 @@ export function LandingPricing() {
     <section
       id="pricing"
       aria-labelledby="pricing-heading"
-      className="relative w-full px-4 py-28 md:py-36"
+      className="relative w-full px-4 py-16 sm:py-24 md:py-36"
     >
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-14">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 md:gap-14">
         <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
           <motion.span
             className="rounded-full border bg-white/40 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] backdrop-blur-md dark:bg-white/10"
@@ -28,7 +28,7 @@ export function LandingPricing() {
           </motion.span>
           <motion.h2
             id="pricing-heading"
-            className="text-4xl font-bold tracking-tighter md:text-6xl"
+            className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-6xl"
             style={{ color: 'rgb(var(--color-primary-dark))' }}
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -38,7 +38,7 @@ export function LandingPricing() {
             Start free. Scale when you're ready.
           </motion.h2>
           <motion.p
-            className="text-base text-slate-600 dark:text-slate-400 md:text-lg"
+            className="text-sm text-slate-600 dark:text-slate-400 sm:text-base md:text-lg"
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-10% 0px' }}
@@ -48,7 +48,7 @@ export function LandingPricing() {
           </motion.p>
         </div>
 
-        <div className="grid w-full gap-5 md:grid-cols-3">
+        <div className="grid w-full gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {PLANS.map((plan, i) => (
             <PricingCard key={plan.id} plan={plan} index={i} />
           ))}
@@ -86,7 +86,7 @@ function PricingCard({ plan, index }: { plan: Plan; index: number }) {
       )}
       <GlowCard className="h-full">
         <div
-          className={`flex h-full flex-col p-5 md:p-6 ${
+          className={`flex h-full min-h-[400px] flex-col p-5 md:p-6 ${
             plan.highlight ? 'ring-2 ring-[rgb(var(--color-primary))]' : ''
           } rounded-2xl`}
         >

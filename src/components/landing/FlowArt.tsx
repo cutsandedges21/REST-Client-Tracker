@@ -7,6 +7,8 @@ import { cn } from '../../lib/utils'
 
 gsap.registerPlugin(ScrollTrigger)
 
+const DESKTOP_BREAKPOINT_PX = 768 // tailwind md
+
 export interface FlowArtProps {
   children: ReactNode
   className?: string
@@ -25,6 +27,12 @@ export function FlowArt({
   useGSAP(
     () => {
       if (!containerRef.current || reducedMotion) return
+
+      // Mobile: render as a plain stacked column, no pinning, no rotation.
+      // Pinned + rotated transforms are unreliable on iOS Safari and the
+      // sections look better as a normal scroll on small screens.
+      const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT_PX}px)`)
+      if (!mq.matches) return
 
       const sections = Array.from(
         containerRef.current.querySelectorAll<HTMLElement>('[data-flow-section]'),

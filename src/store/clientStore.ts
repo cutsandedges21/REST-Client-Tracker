@@ -1,72 +1,35 @@
 import { create } from 'zustand'
-import type { Client, ClientFormInput, ScheduledSlot, ServiceFrequency } from '../types/client'
+import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
-import { db } from './db'
-import { emailService } from '../services/emailService.js'
 import type { PlanId } from '../lib/plans'
-
-const PLANS_STORAGE_KEY = 'userPlans'
-
-function readStoredPlan(username: string | null): PlanId {
-  if (!username) return 'free'
-  try {
-    const raw = localStorage.getItem(PLANS_STORAGE_KEY)
-    if (!raw) return 'free'
-    const map = JSON.parse(raw) as Record<string, PlanId>
-    const stored = map[username]
-    return stored === 'pro' || stored === 'enterprise' || stored === 'free' ? stored : 'free'
-  } catch {
-    return 'free'
-  }
-}
-
-function writeStoredPlan(username: string, plan: PlanId): void {
-  try {
-    const raw = localStorage.getItem(PLANS_STORAGE_KEY)
-    const map = raw ? (JSON.parse(raw) as Record<string, PlanId>) : {}
-    map[username] = plan
-    localStorage.setItem(PLANS_STORAGE_KEY, JSON.stringify(map))
-  } catch (error) {
-    console.error('[ERROR] Failed to persist plan:', error)
-  }
-}
+import {
+  deleteAppointment,
+  deleteClient,
+  deleteCompletedJob,
+  fetchAppointments,
+  fetchClients,
+  fetchCompletedJobs,
+  insertAppointment,
+  insertClient,
+  insertCompletedJob,
+  restoreClientRow,
+  updateAppointmentRow,
+  updateClientRow,
+  updateCompletedJobRow,
+  updateProfilePlan,
+} from '../lib/api'
+import { emailService } from '../services/emailService.js'
 
 type ViewMode = 'cards' | 'table'
 
-function legacyPerCut(raw: Record<string, unknown>): number {
-  if (raw.perCutRate != null) return Number(raw.perCutRate)
-  const hr = Number(raw.hourlyRate ?? 0)
-  const dur = Number(raw.cutDurationMinutes ?? 0)
-  return Number((hr * (dur / 60)).toFixed(2)) || hr
-}
-
-function normalizeClient(raw: Record<string, unknown>): Client {
-  const serviceFrequency: ServiceFrequency =
-    raw.serviceFrequency === 'weekly' ||
-    raw.serviceFrequency === 'biweekly' ||
-    raw.serviceFrequency === 'three_weeks' ||
-    raw.serviceFrequency === 'monthly'
-      ? raw.serviceFrequency as ServiceFrequency
-      : 'weekly'
-
-  return {
-    id: String(raw.id),
-    username: String(raw.username ?? ''),
-    fullName: String(raw.fullName ?? ''),
-    phone: String(raw.phone ?? '').trim(),
-    email: String(raw.email ?? '').trim(),
-    address: String(raw.address ?? ''),
-    perCutRate: legacyPerCut(raw),
-    expensePerClient: Number(raw.expensePerClient ?? 0),
-    cutDurationMinutes: Number(raw.cutDurationMinutes ?? 0),
-    serviceFrequency,
-    notes: raw.notes ? String(raw.notes) : undefined,
-    createdAt: String(raw.createdAt ?? new Date().toISOString()),
-    updatedAt: String(raw.updatedAt ?? new Date().toISOString()),
-  }
+type AuthBundle = {
+  userId: string
+  username: string
+  plan: PlanId
 }
 
 interface ClientState {
+  userId: string | null
   username: string | null
   plan: PlanId
   clients: Client[]
@@ -75,31 +38,29 @@ interface ClientState {
   isLoaded: boolean
   searchTerm: string
   viewMode: ViewMode
-  setUsername: (username: string) => void
-  setPlan: (plan: PlanId) => void
-  initialize: () => Promise<void>
+
+  setAuthBundle: (bundle: AuthBundle | null) => void
+  setPlan: (plan: PlanId) => Promise<void>
+  refresh: () => Promise<void>
+
   addClient: (data: ClientFormInput) => Promise<string>
   updateClient: (id: string, data: ClientFormInput) => Promise<void>
   removeClient: (id: string) => Promise<Client | undefined>
   restoreClient: (client: Client) => Promise<void>
+
   addAppointment: (input: { clientId: string; date: string; time: string }) => Promise<{ ok: true } | { ok: false; reason: string }>
   updateAppointment: (
     id: string,
     input: { clientId: string; date: string; time: string },
   ) => Promise<{ ok: true } | { ok: false; reason: string }>
   removeAppointment: (id: string) => Promise<void>
+
   addCompletedJob: (job: Omit<CompletedJob, 'id' | 'username' | 'createdAt' | 'updatedAt'>) => Promise<string>
   updateCompletedJob: (id: string, job: Partial<CompletedJob>) => Promise<void>
   deleteCompletedJob: (id: string) => Promise<void>
+
   setSearchTerm: (term: string) => void
   setViewMode: (mode: ViewMode) => void
-}
-
-const createId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 function slotConflict(
@@ -112,6 +73,7 @@ function slotConflict(
 }
 
 export const useClientStore = create<ClientState>((set, get) => ({
+  userId: null,
   username: null,
   plan: 'free',
   clients: [],
@@ -120,213 +82,189 @@ export const useClientStore = create<ClientState>((set, get) => ({
   isLoaded: false,
   searchTerm: '',
   viewMode: 'cards',
-  setUsername: (username) =>
-    set({ username, plan: readStoredPlan(username), isLoaded: false }),
-  setPlan: (plan) => {
-    const username = get().username
-    if (username) writeStoredPlan(username, plan)
-    set({ plan })
-  },
-  initialize: async () => {
-    if (get().isLoaded) return
-    const username = get().username
-    if (!username) return
 
-    try {
-      const rawClients = await db.clients.where('username').equals(username).reverse().toArray()
-      const clients = rawClients.map((c) => normalizeClient(c as unknown as Record<string, unknown>))
-      const appointments = await db.appointments.where('username').equals(username).toArray()
-      const completedJobs = await db.completedJobs.where('username').equals(username).toArray()
+  setAuthBundle: (bundle) => {
+    if (!bundle) {
       set({
-        clients,
-        appointments,
-        completedJobs,
-        plan: readStoredPlan(username),
-        isLoaded: true,
+        userId: null,
+        username: null,
+        plan: 'free',
+        clients: [],
+        appointments: [],
+        completedJobs: [],
+        isLoaded: false,
       })
+      emailService.setUsername(null)
+      return
+    }
+    set({
+      userId: bundle.userId,
+      username: bundle.username,
+      plan: bundle.plan,
+      isLoaded: false,
+    })
+    emailService.setUsername(bundle.username)
+    void get().refresh()
+  },
+
+  setPlan: async (plan) => {
+    const { userId } = get()
+    if (!userId) return
+    set({ plan })
+    try {
+      await updateProfilePlan(userId, plan)
     } catch (error) {
-      console.error('[ERROR] Failed to initialize:', error)
-      throw error
+      console.error('[store] failed to update plan:', error)
     }
   },
-  addClient: async (data) => {
-    const username = get().username
-    if (!username) {
-      throw new Error('No username set')
-    }
-    const now = new Date().toISOString()
-    const id = createId()
-    const client: Client = {
-      ...data,
-      id,
-      username,
-      notes: data.notes?.trim() || undefined,
-      createdAt: now,
-      updatedAt: now,
-    }
 
+  refresh: async () => {
+    const { userId, username } = get()
+    if (!userId || !username) return
     try {
-      await db.clients.put(client)
-      set((state) => ({ clients: [client, ...state.clients] }))
+      const [clients, appointments, completedJobs] = await Promise.all([
+        fetchClients(userId, username),
+        fetchAppointments(userId, username),
+        fetchCompletedJobs(userId, username),
+      ])
+      set({ clients, appointments, completedJobs, isLoaded: true })
     } catch (error) {
-      console.error('[ERROR] Failed to add client:', error)
-      throw error
+      console.error('[store] refresh failed:', error)
+      set({ isLoaded: true }) // unblock the UI; user sees empty state
     }
+  },
 
-    // Trigger email notification
+  addClient: async (data) => {
+    const { userId, username } = get()
+    if (!userId || !username) throw new Error('Not signed in')
+    const inserted = await insertClient(userId, username, data)
+    set((state) => ({ clients: [inserted, ...state.clients] }))
+
     const userEmail = emailService.getUserEmail()
     if (userEmail) {
       void emailService
-        .sendEmail({
-          type: 'newClient',
-          client,
-        })
-        .catch((error) => {
-          console.error('Failed to send email notification:', error)
-        })
+        .sendEmail({ type: 'newClient', client: inserted })
+        .catch((err) => console.error('Failed to send email notification:', err))
     }
-
-    return id
+    return inserted.id
   },
-  updateClient: async (id, data) => {
-    const existing = get().clients.find((c) => c.id === id)
-    if (!existing) return
 
-    const updated: Client = {
-      ...existing,
-      ...data,
-      notes: data.notes?.trim() || undefined,
-      updatedAt: new Date().toISOString(),
-    }
-    await db.clients.put(updated)
+  updateClient: async (id, data) => {
+    const { username } = get()
+    if (!username) return
+    const updated = await updateClientRow(id, username, data)
     set((state) => ({
       clients: state.clients.map((c) => (c.id === id ? updated : c)),
     }))
-
-    // Trigger email notification
     const userEmail = emailService.getUserEmail()
     if (userEmail) {
       void emailService
-        .sendEmail({
-          type: 'clientEdit',
-          client: updated,
-        })
-        .catch((error) => {
-          console.error('Failed to send email notification:', error)
-        })
+        .sendEmail({ type: 'clientEdit', client: updated })
+        .catch((err) => console.error('Failed to send email notification:', err))
     }
   },
-  removeClient: async (id) => {
-    const target = get().clients.find((client) => client.id === id)
-    if (!target) return undefined
 
-    await db.clients.delete(id)
-    const remainingAppointments = get().appointments.filter((a) => a.clientId !== id)
-    await db.appointments.where('clientId').equals(id).delete()
+  removeClient: async (id) => {
+    const target = get().clients.find((c) => c.id === id)
+    if (!target) return undefined
+    await deleteClient(id)
     set((state) => ({
-      clients: state.clients.filter((client) => client.id !== id),
-      appointments: remainingAppointments,
+      clients: state.clients.filter((c) => c.id !== id),
+      // appointments for this client cascade in DB; mirror locally
+      appointments: state.appointments.filter((a) => a.clientId !== id),
     }))
     return target
   },
+
   restoreClient: async (client) => {
-    await db.clients.put(client)
-    set((state) => ({ clients: [client, ...state.clients.filter((item) => item.id !== client.id)] }))
+    const { userId } = get()
+    if (!userId) return
+    await restoreClientRow(userId, client)
+    set((state) => ({
+      clients: [client, ...state.clients.filter((item) => item.id !== client.id)],
+    }))
   },
+
+  addAppointment: async ({ clientId, date, time }) => {
+    const { userId, username } = get()
+    if (!userId || !username) throw new Error('Not signed in')
+    if (slotConflict(get().appointments, date, time)) {
+      return { ok: false, reason: 'That time is already booked on this day.' }
+    }
+    try {
+      const slot = await insertAppointment(userId, username, { clientId, date, time })
+      set((state) => ({
+        appointments: [...state.appointments, slot].sort(
+          (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time),
+        ),
+      }))
+      return { ok: true }
+    } catch (error) {
+      console.error('[store] addAppointment failed:', error)
+      return { ok: false, reason: 'Could not save appointment. Try again.' }
+    }
+  },
+
+  updateAppointment: async (id, input) => {
+    const { username } = get()
+    if (!username) return { ok: false, reason: 'Not signed in.' }
+    if (slotConflict(get().appointments, input.date, input.time, id)) {
+      return { ok: false, reason: 'That time is already booked on this day.' }
+    }
+    try {
+      const updated = await updateAppointmentRow(id, username, input)
+      set((state) => ({
+        appointments: state.appointments
+          .map((a) => (a.id === id ? updated : a))
+          .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)),
+      }))
+      return { ok: true }
+    } catch (error) {
+      console.error('[store] updateAppointment failed:', error)
+      return { ok: false, reason: 'Could not update appointment.' }
+    }
+  },
+
+  removeAppointment: async (id) => {
+    await deleteAppointment(id)
+    set((state) => ({ appointments: state.appointments.filter((a) => a.id !== id) }))
+  },
+
   addCompletedJob: async (job) => {
-    const username = get().username
-    if (!username) {
-      throw new Error('No username set')
-    }
-    const now = new Date().toISOString()
-    const id = createId()
-    const completedJob: CompletedJob = {
-      ...job,
-      id,
-      username,
-      createdAt: now,
-      updatedAt: now,
-    }
-    await db.completedJobs.put(completedJob)
-    set((state) => ({ completedJobs: [...state.completedJobs, completedJob] }))
-    return id
+    const { userId, username } = get()
+    if (!userId || !username) throw new Error('Not signed in')
+    const inserted = await insertCompletedJob(userId, username, job)
+    set((state) => ({ completedJobs: [...state.completedJobs, inserted] }))
+    return inserted.id
   },
-  updateCompletedJob: async (id, job) => {
-    const existing = get().completedJobs.find((j) => j.id === id)
-    if (!existing) return
-    const updated: CompletedJob = {
-      ...existing,
-      ...job,
-      updatedAt: new Date().toISOString(),
-    }
-    await db.completedJobs.put(updated)
+
+  updateCompletedJob: async (id, patch) => {
+    const { username } = get()
+    if (!username) return
+    const updated = await updateCompletedJobRow(id, username, patch)
+    if (!updated) return
     set((state) => ({
       completedJobs: state.completedJobs.map((j) => (j.id === id ? updated : j)),
     }))
   },
+
   deleteCompletedJob: async (id) => {
-    await db.completedJobs.delete(id)
+    await deleteCompletedJob(id)
     set((state) => ({
       completedJobs: state.completedJobs.filter((j) => j.id !== id),
     }))
   },
-  addAppointment: async ({ clientId, date, time }) => {
-    const username = get().username
-    if (!username) {
-      throw new Error('No username set')
-    }
-    if (slotConflict(get().appointments, date, time)) {
-      return { ok: false, reason: 'That time is already booked on this day.' }
-    }
-    const now = new Date().toISOString()
-    const slot: ScheduledSlot = {
-      id: createId(),
-      username,
-      clientId,
-      date,
-      time,
-      createdAt: now,
-    }
-    await db.appointments.put(slot)
-    set((state) => ({
-      appointments: [...state.appointments, slot].sort(
-        (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time),
-      ),
-    }))
-    return { ok: true }
-  },
-  updateAppointment: async (id, input) => {
-    const list = get().appointments
-    if (slotConflict(list, input.date, input.time, id)) {
-      return { ok: false, reason: 'That time is already booked on this day.' }
-    }
-    const existing = list.find((a) => a.id === id)
-    if (!existing) return { ok: false, reason: 'Appointment not found.' }
 
-    const updated: ScheduledSlot = {
-      ...existing,
-      clientId: input.clientId,
-      date: input.date,
-      time: input.time,
-    }
-    await db.appointments.put(updated)
-    set((state) => ({
-      appointments: state.appointments
-        .map((a) => (a.id === id ? updated : a))
-        .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)),
-    }))
-    return { ok: true }
-  },
-  removeAppointment: async (id) => {
-    await db.appointments.delete(id)
-    set((state) => ({ appointments: state.appointments.filter((a) => a.id !== id) }))
-  },
   setSearchTerm: (searchTerm) => set({ searchTerm }),
   setViewMode: (viewMode) => set({ viewMode }),
 }))
 
 /** Times already taken on a date (for pickers). */
-export function getBookedTimesForDate(appointments: ScheduledSlot[], date: string, excludeId?: string): Set<string> {
+export function getBookedTimesForDate(
+  appointments: ScheduledSlot[],
+  date: string,
+  excludeId?: string,
+): Set<string> {
   const set = new Set<string>()
   for (const a of appointments) {
     if (a.date === date && a.id !== excludeId) set.add(a.time)

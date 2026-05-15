@@ -21,14 +21,22 @@ export function FlowSection({
     <section
       data-flow-section
       aria-label={ariaLabel}
-      className={cn('relative min-h-screen w-full overflow-hidden', className)}
+      className={cn(
+        'relative w-full overflow-hidden',
+        // Mobile: each section sizes to its content with comfortable padding.
+        // Desktop: full viewport for the GSAP pin/rotate animation.
+        'min-h-fit md:min-h-screen',
+        className,
+      )}
       style={style}
     >
       <div
         data-flow-inner
         className={cn(
-          'flow-art-container relative flex min-h-screen w-full flex-col justify-center',
-          'px-[4vw] py-[clamp(3rem,10vw,6rem)] will-change-transform',
+          'flow-art-container relative flex w-full flex-col justify-center',
+          'min-h-fit md:min-h-screen',
+          'px-6 py-16 sm:px-8 md:px-[4vw] md:py-[clamp(3rem,10vw,6rem)]',
+          'will-change-transform',
           innerClassName,
         )}
         style={{ transformOrigin: 'bottom left' }}

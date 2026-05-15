@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { SettingsPage } from '../components/SettingsPage'
 import { GlowCard } from '../components/GlowCard'
-import { db } from '../store/db'
+import { supabase } from '../lib/supabase'
+import { useClientStore } from '../store/clientStore'
+import { useAuth } from '../contexts/AuthContext'
 
 type AccountPageProps = {
   username: string | null
@@ -9,25 +12,46 @@ type AccountPageProps = {
 }
 
 export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
+  const { user } = useAuth()
+  const refresh = useClientStore((s) => s.refresh)
+  const [resetting, setResetting] = useState(false)
+
   const handleResetAllData = async () => {
-    if (!confirm('Are you sure you want to reset all data? This will delete all clients, appointments, and completed jobs. This action cannot be undone.')) {
+    if (!user) return
+    if (
+      !confirm(
+        'Are you sure you want to reset all data? This will delete all clients, appointments, and completed jobs from your account. This action cannot be undone.',
+      )
+    ) {
       return
     }
 
+    setResetting(true)
     try {
-      // Delete all IndexedDB data
-      await db.clients.clear()
-      await db.appointments.clear()
-      await db.completedJobs.clear()
+      // Order matters because of FK cascade safety; appointments + completed_jobs
+      // both reference clients. Cascade-on-delete handles it, but doing it
+      // explicitly avoids any race in the UI.
+      await supabase.from('appointments').delete().eq('user_id', user.id)
+      await supabase.from('completed_jobs').delete().eq('user_id', user.id)
+      await supabase.from('clients').delete().eq('user_id', user.id)
 
-      // Clear localStorage
-      localStorage.clear()
+      // Local per-device caches (one-time tasks, expenses, email/EmailJS config)
+      // remain device-local. Wipe them too on full reset for parity.
+      const u = username
+      if (u) {
+        localStorage.removeItem(`oneTimeTasks_${u}`)
+        localStorage.removeItem(`expenses_${u}`)
+        localStorage.removeItem(`userEmail_${u}`)
+        localStorage.removeItem(`emailjsConfig_${u}`)
+      }
 
-      // Reload the page
-      window.location.reload()
+      await refresh()
+      alert('All data reset.')
     } catch (error) {
       console.error('Failed to reset data:', error)
       alert('Failed to reset data. Please try again.')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -45,6 +69,9 @@ export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
             <p className="mt-2 text-base font-medium text-slate-800">
               {username ?? 'Unknown user'}
             </p>
+            {user?.email && (
+              <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+            )}
           </div>
 
           <div className="border-t border-slate-200 pt-5">
@@ -58,9 +85,7 @@ export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
           </div>
 
           <div className="border-t border-slate-200 pt-5">
-            <h3
-              className="text-base font-semibold tracking-tight text-slate-900"
-            >
+            <h3 className="text-base font-semibold tracking-tight text-slate-900">
               Danger Zone
             </h3>
             <p className="mt-1 text-sm text-slate-600">
@@ -69,9 +94,10 @@ export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
             <button
               type="button"
               onClick={handleResetAllData}
-              className="mt-3 inline-flex items-center gap-2 rounded-xl border border-red-300 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+              disabled={resetting}
+              className="mt-3 inline-flex items-center gap-2 rounded-xl border border-red-300 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-60"
             >
-              Reset All Data
+              {resetting ? 'Resetting…' : 'Reset All Data'}
             </button>
           </div>
         </div>

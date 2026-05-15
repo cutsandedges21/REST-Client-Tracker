@@ -1,16 +1,20 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { AuthProvider } from './contexts/AuthContext'
 import { AuthGuard } from './components/AuthGuard'
 import { RouteTransition } from './components/RouteTransition'
 import { Landing } from './pages/Landing'
 import { LoginScreen } from './components/LoginScreen'
+import { AuthCallback } from './pages/AuthCallback'
 import { AuthedApp } from './AuthedApp'
 
 function RootLayout() {
   return (
-    <ThemeProvider>
-      <RouteTransition />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <RouteTransition />
+      </ThemeProvider>
+    </AuthProvider>
   )
 }
 
@@ -22,6 +26,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Landing /> },
       { path: 'login', element: <LoginScreen mode="login" /> },
       { path: 'signup', element: <LoginScreen mode="signup" /> },
+      { path: 'auth/callback', element: <AuthCallback /> },
       {
         path: 'app/*',
         element: (
