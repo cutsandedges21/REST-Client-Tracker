@@ -21,7 +21,11 @@
       "Bash(rm -rf .playwright-mcp)",
       "Bash(pkill -f \"vite\")",
       "Bash(grep -q \"^.env$\" .gitignore)",
-      "Bash(npm ls *)"
+      "Bash(npm ls *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl *)",
+      "Bash(taskkill *)",
+      "Bash(npx kill-port *)"
     ]
   }
 }
