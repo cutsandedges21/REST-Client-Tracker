@@ -106,9 +106,11 @@ export function LoginScreen({ mode = 'login' }: Props) {
       }
       setSubmitting(true)
       try {
+        console.log('[LoginScreen] Attempting sign in for username:', username.trim())
         await signInWithUsername(username.trim(), password)
         // onAuthStateChange will update session; the redirect effect above will fire.
       } catch (signInError) {
+        console.error('[LoginScreen] Sign in failed:', signInError)
         setError(describeAuthError(signInError.message))
         return
       } finally {

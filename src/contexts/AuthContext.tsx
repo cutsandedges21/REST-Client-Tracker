@@ -108,11 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Username/password auth helpers
       signInWithUsername: async (username: string, password: string) => {
         const email = generatePlaceholderEmail(username)
+        console.log('[AuthContext] Attempting sign in for username:', username, 'email:', email)
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
-        if (error) throw error
+        if (error) {
+          console.error('[AuthContext] Sign in error:', error)
+          throw error
+        }
+        console.log('[AuthContext] Sign in successful for username:', username)
       },
       signUpWithUsername: async (username: string, password: string) => {
         const email = generatePlaceholderEmail(username)
