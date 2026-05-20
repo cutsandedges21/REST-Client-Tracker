@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { GlowCard } from './GlowCard'
 import { AnimatedBackground } from './AnimatedBackground'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 type Mode = 'login' | 'signup'
@@ -16,13 +15,13 @@ const MIN_PASSWORD_LENGTH = 8
 
 function describeAuthError(message: string): string {
   if (message.toLowerCase().includes('invalid login credentials')) {
-    return 'Wrong email or password.'
+    return 'Wrong username or password.'
   }
-  if (message.toLowerCase().includes('email not confirmed')) {
-    return 'Please confirm your email — check your inbox for the link.'
+  if (message.toLowerCase().includes('not confirmed')) {
+    return 'Please confirm your account — check your inbox for the link.'
   }
-  if (message.toLowerCase().includes('user already registered')) {
-    return 'An account with that email already exists. Try signing in instead.'
+  if (message.toLowerCase().includes('already registered')) {
+    return 'An account with that username already exists. Try signing in instead.'
   }
   if (message.toLowerCase().includes('password')) {
     return message
@@ -33,11 +32,10 @@ function describeAuthError(message: string): string {
 export function LoginScreen({ mode = 'login' }: Props) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { session, loading: authLoading } = useAuth()
+  const { session, loading: authLoading, signInWithUsername, signUpWithUsername } = useAuth()
 
   const [isRegistering, setIsRegistering] = useState(mode === 'signup')
   const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -67,10 +65,6 @@ export function LoginScreen({ mode = 'login' }: Props) {
         setError('Username must be 3–24 characters: letters, numbers, underscore.')
         return
       }
-      if (!email.trim()) {
-        setError('Enter your email.')
-        return
-      }
       if (password.length < MIN_PASSWORD_LENGTH) {
         setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`)
         return
@@ -95,17 +89,9 @@ export function LoginScreen({ mode = 'login' }: Props) {
           return
         }
 
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: { username: username.trim() },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        })
-
-        if (signUpError) {
-          setError(describeAuthError(signUpError.message))
+        const { error } = await signUpWithUsername(username.trim(), password)
+        if (error) {
+          setError(describeAuthError(error.message))
           return
         }
 
@@ -114,21 +100,17 @@ export function LoginScreen({ mode = 'login' }: Props) {
         setSubmitting(false)
       }
     } else {
-      if (!email.trim() || !password) {
-        setError('Enter your email and password.')
+      if (!username.trim() || !password) {
+        setError('Enter your username and password.')
         return
       }
       setSubmitting(true)
       try {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-        if (signInError) {
-          setError(describeAuthError(signInError.message))
-          return
-        }
+        await signInWithUsername(username.trim(), password)
         // onAuthStateChange will update session; the redirect effect above will fire.
+      } catch (signInError) {
+        setError(describeAuthError(signInError.message))
+        return
       } finally {
         setSubmitting(false)
       }
@@ -154,7 +136,7 @@ export function LoginScreen({ mode = 'login' }: Props) {
         <GlowCard>
           <div className="w-full max-w-md p-5 sm:p-7 md:p-8">
             {confirmationSent ? (
-              <ConfirmationSentView email={email} onBack={() => setConfirmationSent(false)} />
+              <ConfirmationSentView username={username} onBack={() => setConfirmationSent(false)} />
             ) : (
               <>
                 <h1
@@ -170,32 +152,16 @@ export function LoginScreen({ mode = 'login' }: Props) {
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                  {isRegistering && (
-                    <Field label="Username">
-                      <input
-                        type="text"
-                        autoComplete="username"
-                        autoCapitalize="none"
-                        spellCheck={false}
-                        className={inputClasses}
-                        placeholder="Choose a username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                      />
-                    </Field>
-                  )}
-
-                  <Field label="Email">
+                  <Field label="Username">
                     <input
-                      type="email"
-                      autoComplete="email"
+                      type="text"
+                      autoComplete="username"
                       autoCapitalize="none"
                       spellCheck={false}
-                      inputMode="email"
                       className={inputClasses}
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Choose a username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                     />
                   </Field>
 
@@ -271,7 +237,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function ConfirmationSentView({ email, onBack }: { email: string; onBack: () => void }) {
+function ConfirmationSentView({ username, onBack }: { username: string; onBack: () => void }) {
   return (
     <div className="text-center">
       <h1
@@ -281,7 +247,7 @@ function ConfirmationSentView({ email, onBack }: { email: string; onBack: () => 
         Check your inbox
       </h1>
       <p className="mb-2 text-sm text-slate-600">
-        We sent a confirmation link to <span className="font-semibold">{email}</span>.
+        We sent a confirmation link to <span className="font-semibold">{username}@client-tracker.local</span>.
       </p>
       <p className="mb-6 text-sm text-slate-600">
         Click the link to finish creating your account, then come back here to sign in.
