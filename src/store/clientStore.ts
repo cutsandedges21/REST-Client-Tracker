@@ -135,8 +135,17 @@ export const useClientStore = create<ClientState>((set, get) => ({
   },
 
   addClient: async (data) => {
-    const { userId, username } = get()
+    const { userId, username, plan, clients } = get()
     if (!userId || !username) throw new Error('Not signed in')
+
+    // Check if user is special (mb08 or jt08) - they get unlimited clients
+    const isSpecialUser = ['mb08', 'jt08'].includes(username)
+
+    // Only enforce client limits for non-special users on free plan
+    if (!isSpecialUser && plan === 'free' && clients.length >= 3) {
+      throw new Error('Client limit reached. Upgrade to Pro for unlimited clients.')
+    }
+
     const inserted = await insertClient(userId, username, data)
     set((state) => ({ clients: [inserted, ...state.clients] }))
 

@@ -17,6 +17,9 @@ type AuthState = {
   loading: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  // Username/password auth helpers
+  signInWithUsername: (username: string, password: string) => Promise<void>
+  signUpWithUsername: (username: string, password: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -33,6 +36,25 @@ async function fetchProfile(userId: string): Promise<ProfileRow | null> {
     return null
   }
   return data
+}
+
+async function fetchProfileByUsername(username: string): Promise<ProfileRow | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, plan, created_at')
+    .eq('username', username)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[AuthContext] failed to fetch profile by username:', error)
+    return null
+  }
+  return data
+}
+
+// Generate a placeholder email from username for Supabase auth operations
+const generatePlaceholderEmail = (username: string): string => {
+  return `${username}@client-tracker.local`
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -82,6 +104,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!session?.user) return
         const p = await fetchProfile(session.user.id)
         setProfile(p)
+      },
+      // Username/password auth helpers
+      signInWithUsername: async (username: string, password: string) => {
+        const email = generatePlaceholderEmail(username)
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (error) throw error
+      },
+      signUpWithUsername: async (username: string, password: string) => {
+        const email = generatePlaceholderEmail(username)
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+        return { error }
       },
     }),
     [session, profile, loading],

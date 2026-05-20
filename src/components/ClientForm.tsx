@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { clientSchema, type ClientSchema } from '../lib/validation'
 import { cn } from '../lib/utils'
 import { GlowCard } from './GlowCard'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ClientFormProps {
   onSubmit: (values: ClientSchema) => Promise<string>
@@ -18,6 +19,7 @@ const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]'
 
 export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeRequired }: ClientFormProps) {
+  const { username } = useAuth()
   const [timeUnit, setTimeUnit] = useState<'minutes' | 'hours'>('minutes')
   const [scheduleClient, setScheduleClient] = useState(false)
   const [scheduleDate, setScheduleDate] = useState('')
@@ -78,7 +80,7 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
             Frequency and rate are used to estimate your monthly total. Phone and email are optional.
           </p>
 
-          {atLimit && (
+          {atLimit && username !== 'mb08' && username !== 'jt08' && (
             <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               <span className="mt-0.5 text-base">⚡</span>
               <div className="flex-1">
@@ -248,7 +250,7 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
             </div>
 
             <div className="md:col-span-2">
-              {atLimit ? (
+              {atLimit && username !== 'mb08' && username !== 'jt08' ? (
                 <button
                   type="button"
                   onClick={onUpgradeRequired}

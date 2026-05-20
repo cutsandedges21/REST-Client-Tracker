@@ -66,8 +66,11 @@ export function AuthedApp() {
   } = useClientStore()
 
   const currentPlan = getPlan(plan)
+  const isSpecialUser = ['mb08', 'jt08'].includes(username)
   const atClientLimit =
-    currentPlan.clientLimit !== null && clients.length >= currentPlan.clientLimit
+    currentPlan.clientLimit !== null &&
+    !isSpecialUser &&
+    clients.length >= currentPlan.clientLimit
 
   // Sync auth context -> store. Triggers initial data fetch.
   useEffect(() => {
