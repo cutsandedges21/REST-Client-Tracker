@@ -14,6 +14,7 @@ if (!supabaseUrl || !supabasePublishableKey) {
 // schema (TS infers Insert payloads as `never`). Type safety lives in
 // src/lib/api.ts, which exposes a typed surface to the rest of the app and
 // owns the row-shape contracts.
+console.log('[Supabase] Initializing client with URL:', supabaseUrl)
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
     persistSession: true,
