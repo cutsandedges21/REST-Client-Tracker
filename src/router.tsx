@@ -23,9 +23,9 @@ export const router = createBrowserRouter([
     path: '/',
     element: <RootLayout />,
     children: [
-      // Home/landing page hidden — redirect to the app (AuthGuard sends to /login if signed out).
+      // Home/landing page hidden — redirect to login first.
       // Landing kept imported below so the code stays available to un-hide later.
-      { index: true, element: <Navigate to="/app" replace /> },
+      { index: true, element: <Navigate to="/login" replace /> },
       { path: 'login', element: <LoginScreen mode="login" /> },
       // Signup hidden — only a login page is exposed. Route preserved but redirected.
       { path: 'signup', element: <Navigate to="/login" replace /> },
