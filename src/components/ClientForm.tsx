@@ -19,7 +19,8 @@ const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]'
 
 export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeRequired }: ClientFormProps) {
-  const { username } = useAuth()
+  const { profile } = useAuth()
+  const username = profile?.username
   const [timeUnit, setTimeUnit] = useState<'minutes' | 'hours'>('minutes')
   const [scheduleClient, setScheduleClient] = useState(false)
   const [scheduleDate, setScheduleDate] = useState('')

@@ -76,7 +76,7 @@ function clientFormToRow(input: ClientFormInput, userId: string) {
 export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, plan, created_at')
+    .select('id, username, account_name, plan, created_at')
     .eq('id', userId)
     .maybeSingle()
   if (error) {
@@ -93,6 +93,20 @@ export async function updateProfilePlan(userId: string, plan: PlanTier): Promise
     .eq('id', userId)
   if (error) {
     console.error('[api] updateProfilePlan failed:', error)
+    throw error
+  }
+}
+
+export async function updateProfileAccountName(
+  userId: string,
+  accountName: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ account_name: accountName })
+    .eq('id', userId)
+  if (error) {
+    console.error('[api] updateProfileAccountName failed:', error)
     throw error
   }
 }

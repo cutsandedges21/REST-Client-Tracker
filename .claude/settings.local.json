@@ -25,7 +25,10 @@
       "Bash(curl -s http://localhost:5173)",
       "Bash(curl *)",
       "Bash(taskkill *)",
-      "Bash(npx kill-port *)"
+      "Bash(npx kill-port *)",
+      "Bash(nslookup zxjmltvytiiyusqixtsw.supabase.co)",
+      "Bash(nslookup supabase.co)",
+      "WebFetch(domain:supabase.com)"
     ]
   }
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
-import type { PlanId } from '../lib/plans'
+import { isSpecialUser, type PlanId } from '../lib/plans'
 import {
   deleteAppointment,
   deleteClient,
@@ -97,10 +97,12 @@ export const useClientStore = create<ClientState>((set, get) => ({
       emailService.setUsername(null)
       return
     }
+    // Special users always have full access — force the max (enterprise) plan regardless of stored plan.
+    const effectivePlan = isSpecialUser(bundle.username) ? 'enterprise' : bundle.plan
     set({
       userId: bundle.userId,
       username: bundle.username,
-      plan: bundle.plan,
+      plan: effectivePlan,
       isLoaded: false,
     })
     emailService.setUsername(bundle.username)
@@ -138,11 +140,8 @@ export const useClientStore = create<ClientState>((set, get) => ({
     const { userId, username, plan, clients } = get()
     if (!userId || !username) throw new Error('Not signed in')
 
-    // Check if user is special (mb08 or jt08) - they get unlimited clients
-    const isSpecialUser = ['mb08', 'jt08'].includes(username)
-
-    // Only enforce client limits for non-special users on free plan
-    if (!isSpecialUser && plan === 'free' && clients.length >= 3) {
+    // Special users get unlimited clients; only enforce limits for others on free plan.
+    if (!isSpecialUser(username) && plan === 'free' && clients.length >= 3) {
       throw new Error('Client limit reached. Upgrade to Pro for unlimited clients.')
     }
 

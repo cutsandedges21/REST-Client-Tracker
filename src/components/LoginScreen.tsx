@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { GlowCard } from './GlowCard'
 import { AnimatedBackground } from './AnimatedBackground'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 
 type Mode = 'login' | 'signup'
 

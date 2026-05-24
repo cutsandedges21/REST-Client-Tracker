@@ -26,7 +26,7 @@ import { reminderScheduler } from './services/reminderScheduler'
 import { getDashboardMetrics } from './lib/finance'
 import { useTheme } from './contexts/ThemeContext'
 import { useAuth } from './contexts/AuthContext'
-import { getPlan, type PlanId } from './lib/plans'
+import { getPlan, isSpecialUser, type PlanId } from './lib/plans'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
@@ -66,10 +66,9 @@ export function AuthedApp() {
   } = useClientStore()
 
   const currentPlan = getPlan(plan)
-  const isSpecialUser = ['mb08', 'jt08'].includes(username)
   const atClientLimit =
     currentPlan.clientLimit !== null &&
-    !isSpecialUser &&
+    !isSpecialUser(username) &&
     clients.length >= currentPlan.clientLimit
 
   // Sync auth context -> store. Triggers initial data fetch.
@@ -371,6 +370,7 @@ export function AuthedApp() {
           onNavigate={setView}
           plan={plan}
           username={username}
+          accountName={profile?.account_name}
         />
       )}
     </main>

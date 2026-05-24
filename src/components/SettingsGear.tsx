@@ -10,6 +10,7 @@ type SettingsGearProps = {
   onNavigate: (view: SettingsView) => void
   plan: PlanId
   username: string | null
+  accountName?: string | null
 }
 
 type PanelOption = {
@@ -25,7 +26,7 @@ const PANEL_OPTIONS: PanelOption[] = [
   { view: 'upgrade', label: 'Upgrade', Icon: CreditCard },
 ]
 
-export function SettingsGear({ currentView, onNavigate, plan, username }: SettingsGearProps) {
+export function SettingsGear({ currentView, onNavigate, plan, username, accountName }: SettingsGearProps) {
   const [panelOpen, setPanelOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -33,7 +34,8 @@ export function SettingsGear({ currentView, onNavigate, plan, username }: Settin
   const mobileSpinControls = useAnimationControls()
 
   const planName = getPlan(plan).name
-  const userLabel = username ? `@${username}` : ''
+  const trimmedName = accountName?.trim()
+  const userLabel = trimmedName ? trimmedName : username ? `@${username}` : ''
   const showExpandedDesktop = hovered || panelOpen
 
   useEffect(() => {

@@ -2,7 +2,8 @@
 -- REST Client Tracker — Supabase Schema
 -- ============================================================================
 -- Paste this into the Supabase SQL Editor for your project and run it once.
--- Project: https://zxjmltvytiiyusqixtsw.supabase.co
+-- Safe to re-run (idempotent: create-if-not-exists, add-column-if-not-exists,
+-- create-or-replace functions, drop-then-create policies/triggers).
 --
 -- Tables: profiles, clients, appointments, completed_jobs
 -- All tables RLS-enabled, scoped to auth.uid().
@@ -15,9 +16,13 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
+  account_name text,
   plan text not null default 'free' check (plan in ('free','pro','enterprise')),
   created_at timestamptz not null default now()
 );
+
+-- account_name added after initial release; backfill for existing tables.
+alter table public.profiles add column if not exists account_name text;
 
 alter table public.profiles enable row level security;
 

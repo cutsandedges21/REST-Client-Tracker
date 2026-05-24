@@ -5,6 +5,7 @@ export type ServiceFrequencyDb = 'weekly' | 'biweekly' | 'three_weeks' | 'monthl
 export interface ProfileRow {
   id: string
   username: string
+  account_name: string | null
   plan: PlanTier
   created_at: string
 }

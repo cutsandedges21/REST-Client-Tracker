@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthState | null>(null)
 async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, plan, created_at')
+    .select('id, username, account_name, plan, created_at')
     .eq('id', userId)
     .maybeSingle()
 
@@ -41,7 +41,7 @@ async function fetchProfile(userId: string): Promise<ProfileRow | null> {
 async function fetchProfileByUsername(username: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, plan, created_at')
+    .select('id, username, account_name, plan, created_at')
     .eq('username', username)
     .maybeSingle()
 
@@ -65,21 +65,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
 
-    void supabase.auth.getSession().then(async ({ data }) => {
-      if (cancelled) return
-      setSession(data.session)
-      if (data.session?.user) {
-        const p = await fetchProfile(data.session.user.id)
-        if (!cancelled) setProfile(p)
-      }
-      if (!cancelled) setLoading(false)
-    })
+    void supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (cancelled) return
+        setSession(data.session)
+        if (data.session?.user) {
+          const p = await fetchProfile(data.session.user.id)
+          if (!cancelled) setProfile(p)
+        }
+      })
+      .catch((error) => {
+        console.error('[AuthContext] getSession failed:', error)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    // IMPORTANT: keep this callback synchronous. supabase-js holds an internal
+    // auth lock while firing these events; awaiting another supabase call (e.g.
+    // fetchProfile -> supabase.from) inside the callback deadlocks the lock and
+    // hangs getSession() forever. Defer any supabase calls with setTimeout(0).
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
       if (nextSession?.user) {
-        const p = await fetchProfile(nextSession.user.id)
-        setProfile(p)
+        const userId = nextSession.user.id
+        setTimeout(() => {
+          void fetchProfile(userId).then((p) => {
+            if (!cancelled) setProfile(p)
+          })
+        }, 0)
       } else {
         setProfile(null)
       }
