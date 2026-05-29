@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, CreditCard, FileText, LogOut, Palette, Search, User } from 'lucide-react'
+import { ChevronRight, CreditCard, FileText, HelpCircle, LogOut, Palette, Search, User } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { ClientEditDialog } from './components/ClientEditDialog'
 import { ClientForm } from './components/ClientForm'
@@ -19,7 +19,9 @@ import { InvoiceDialog } from './components/InvoiceDialog'
 import { AnimatedBackground } from './components/AnimatedBackground'
 import { RestMark } from './components/RestMark'
 import { AppNav, type AppTab } from './components/AppNav'
+import { OnboardingTour, type TourStep } from './components/OnboardingTour'
 import { ThemePage } from './pages/ThemePage'
+import { GuidePage } from './pages/GuidePage'
 import { InvoiceTemplatePage } from './pages/InvoiceTemplatePage'
 import { AccountPage } from './pages/AccountPage'
 import { UpgradePage } from './pages/UpgradePage'
@@ -33,7 +35,7 @@ import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
 
-type SettingsView = 'main' | 'theme' | 'invoice' | 'account' | 'upgrade'
+type SettingsView = 'main' | 'guide' | 'theme' | 'invoice' | 'account' | 'upgrade'
 
 export function AuthedApp() {
   const navigate = useNavigate()
@@ -47,6 +49,7 @@ export function AuthedApp() {
   const [invoicingClient, setInvoicingClient] = useState<Client | null>(null)
   const [completeJobOpen, setCompleteJobOpen] = useState(false)
   const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined)
+  const [showTour, setShowTour] = useState(false)
 
   const {
     clients,
@@ -112,6 +115,61 @@ export function AuthedApp() {
     next.delete('checkout')
     setSearchParams(next, { replace: true })
   }, [searchParams, refreshProfile, setSearchParams])
+
+  // First-time users get a one-off guided tour (per device, per account).
+  useEffect(() => {
+    if (!isLoaded || !username) return
+    try {
+      if (localStorage.getItem(`rest-tour-done-${username}`) === '1') return
+    } catch {
+      return
+    }
+    const t = setTimeout(() => setShowTour(true), 700)
+    return () => clearTimeout(t)
+  }, [isLoaded, username])
+
+  const finishTour = () => {
+    try {
+      if (username) localStorage.setItem(`rest-tour-done-${username}`, '1')
+    } catch {
+      // ignore
+    }
+    setShowTour(false)
+  }
+
+  const tourSteps: TourStep[] = [
+    {
+      selector: null,
+      title: 'Welcome to REST 👋',
+      body: 'A quick 5-step tour of how everything works — about 30 seconds. You can skip anytime.',
+    },
+    {
+      selector: 'home-stats',
+      title: 'Your real numbers',
+      body: 'Home shows all-time earnings, net profit, hourly rate, margin and markup — built from the jobs you log.',
+      onEnter: () => setTab('home'),
+    },
+    {
+      selector: 'clients-add',
+      title: 'Add your clients',
+      body: 'Add each customer with their rate, frequency and expenses, then invoice or log a finished job from their card.',
+      onEnter: () => setTab('clients'),
+    },
+    {
+      selector: 'schedule',
+      title: 'Schedule visits',
+      body: 'Book appointments on the calendar and get a reminder about 30 minutes before each one.',
+      onEnter: () => setTab('schedule'),
+    },
+    {
+      selector: 'guide-link',
+      title: 'Help is always here',
+      body: 'Whenever you’re unsure, open “How to use REST” for a full walkthrough of every feature.',
+      onEnter: () => setTab('more'),
+      cta: 'Open the guide',
+      onCta: () => setView('guide'),
+    },
+  ]
 
   const filteredClients = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -192,6 +250,15 @@ export function AuthedApp() {
         <div className="flex min-h-screen items-center justify-center">
           <p className="animate-pulse text-sm text-slate-600">Loading your data…</p>
         </div>
+      ) : view === 'guide' ? (
+        <GuidePage
+          onBack={() => setView('main')}
+          onReplayTour={() => {
+            setView('main')
+            setTab('home')
+            setShowTour(true)
+          }}
+        />
       ) : view === 'theme' ? (
         <ThemePage
           theme={theme}
@@ -225,7 +292,9 @@ export function AuthedApp() {
             >
               {tab === 'home' && (
                 <>
-                  <AllTimeStats completedJobs={completedJobs} expenses={expenses} />
+                  <div data-tour="home-stats">
+                    <AllTimeStats completedJobs={completedJobs} expenses={expenses} />
+                  </div>
                   <DashboardStats {...metrics} />
                   <ProfitChart completedJobs={completedJobs} />
                   <EarningsChart clients={clients} />
@@ -269,28 +338,32 @@ export function AuthedApp() {
                     onInvoice={setInvoicingClient}
                   />
 
-                  <ClientForm
-                    onSubmit={addClient}
-                    onSchedule={async (clientId, date, time) => {
-                      const result = await addAppointment({ clientId, date, time })
-                      if (!result.ok) toast.error((result as { ok: false; reason: string }).reason)
-                    }}
-                    atLimit={atClientLimit}
-                    onUpgradeRequired={() => setView('upgrade')}
-                  />
+                  <div data-tour="clients-add">
+                    <ClientForm
+                      onSubmit={addClient}
+                      onSchedule={async (clientId, date, time) => {
+                        const result = await addAppointment({ clientId, date, time })
+                        if (!result.ok) toast.error((result as { ok: false; reason: string }).reason)
+                      }}
+                      atLimit={atClientLimit}
+                      onUpgradeRequired={() => setView('upgrade')}
+                    />
+                  </div>
 
                   <ExpensesCard />
                 </>
               )}
 
               {tab === 'schedule' && (
-                <ScheduleCalendar
-                  clients={clients}
-                  appointments={appointments}
-                  onAdd={(input) => addAppointment(input)}
-                  onUpdate={(id, input) => updateAppointment(id, input)}
-                  onRemove={(id) => void removeAppointment(id)}
-                />
+                <div data-tour="schedule">
+                  <ScheduleCalendar
+                    clients={clients}
+                    appointments={appointments}
+                    onAdd={(input) => addAppointment(input)}
+                    onUpdate={(id, input) => updateAppointment(id, input)}
+                    onRemove={(id) => void removeAppointment(id)}
+                  />
+                </div>
               )}
 
               {tab === 'more' && (
@@ -307,6 +380,8 @@ export function AuthedApp() {
       )}
 
       {view === 'main' && <AppNav variant="bottom" active={tab} onChange={setTab} />}
+
+      {showTour && view === 'main' && <OnboardingTour steps={tourSteps} onFinish={finishTour} />}
 
       <DeleteConfirmDialog
         open={Boolean(pendingDelete)}
@@ -369,6 +444,7 @@ function MoreTab({
   onSignOut: () => void
 }) {
   const items: { view: SettingsView; label: string; description: string; Icon: typeof Palette }[] = [
+    { view: 'guide', label: 'How to use REST', description: 'Guide & feature walkthrough', Icon: HelpCircle },
     { view: 'theme', label: 'Theme', description: 'Light/dark & accent colour', Icon: Palette },
     { view: 'invoice', label: 'Invoices', description: 'Business name & default message', Icon: FileText },
     { view: 'account', label: 'Account', description: 'Profile & data', Icon: User },
@@ -394,11 +470,12 @@ function MoreTab({
       </GlowCard>
 
       <GlowCard>
-        <ul className="divide-y divide-slate-200/70">
+        <ul className="divide-y divide-slate-200/70 overflow-hidden rounded-[0.9375rem]">
           {items.map(({ view, label, description, Icon }) => (
             <li key={view}>
               <button
                 type="button"
+                data-tour={view === 'guide' ? 'guide-link' : undefined}
                 onClick={() => onNavigate(view)}
                 className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-slate-50"
               >
