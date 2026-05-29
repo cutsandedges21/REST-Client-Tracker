@@ -52,9 +52,12 @@ async function fetchProfileByUsername(username: string): Promise<ProfileRow | nu
   return data
 }
 
-// Generate a placeholder email from username for Supabase auth operations
+// Generate a placeholder email from username for Supabase auth operations.
+// NOTE: Supabase rejects non-public TLDs like ".local" on signup, so we use a
+// real public TLD. No mail is ever sent (email confirmation must be disabled).
+const AUTH_EMAIL_DOMAIN = 'clienttracker.app'
 const generatePlaceholderEmail = (username: string): string => {
-  return `${username}@client-tracker.local`
+  return `${username}@${AUTH_EMAIL_DOMAIN}`
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -122,17 +125,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       // Username/password auth helpers
       signInWithUsername: async (username: string, password: string) => {
-        const email = generatePlaceholderEmail(username)
-        console.log('[AuthContext] Attempting sign in for username:', username, 'email:', email)
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (error) {
-          console.error('[AuthContext] Sign in error:', error)
-          throw error
+        // New accounts use a public-TLD domain; older accounts used "@client-tracker.local".
+        // Try the current domain first, then fall back to the legacy one so existing
+        // users keep working without any migration.
+        const candidates = [generatePlaceholderEmail(username), `${username}@client-tracker.local`]
+        let lastError: Error | null = null
+        for (const email of candidates) {
+          const { error } = await supabase.auth.signInWithPassword({ email, password })
+          if (!error) {
+            console.log('[AuthContext] Sign in successful for username:', username)
+            return
+          }
+          lastError = error
         }
-        console.log('[AuthContext] Sign in successful for username:', username)
+        console.error('[AuthContext] Sign in error:', lastError)
+        if (lastError) throw lastError
       },
       signUpWithUsername: async (username: string, password: string) => {
         const email = generatePlaceholderEmail(username)

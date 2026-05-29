@@ -21,10 +21,13 @@ function describeAuthError(message: string): string {
     return 'Wrong username or password.'
   }
   if (message.toLowerCase().includes('not confirmed')) {
-    return 'Please confirm your account — check your inbox for the link.'
+    return 'Almost there — the project owner needs to turn OFF “Confirm email” in Supabase (Authentication → Sign In / Providers → Email).'
   }
   if (message.toLowerCase().includes('already registered')) {
     return 'An account with that username already exists. Try signing in instead.'
+  }
+  if (message.toLowerCase().includes('email') && message.toLowerCase().includes('invalid')) {
+    return 'Sign-up was rejected by the server. Please try again, or contact support.'
   }
   if (message.toLowerCase().includes('password')) {
     return message
@@ -114,7 +117,15 @@ export function LoginScreen({ mode = 'login' }: Props) {
           return
         }
 
-        setConfirmationSent(true)
+        // Placeholder emails can't receive a confirmation link, so email
+        // confirmation must be OFF in Supabase. Sign in immediately; the redirect
+        // effect then sends the user into the app. If confirmation is still on,
+        // the sign-in fails and we explain the one-time setting to flip.
+        try {
+          await signInWithUsername(username.trim(), password)
+        } catch (signInErr) {
+          setError(describeAuthError(signInErr instanceof Error ? signInErr.message : 'not confirmed'))
+        }
       } finally {
         setSubmitting(false)
       }
