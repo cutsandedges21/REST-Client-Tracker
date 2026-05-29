@@ -43,6 +43,13 @@ body {
   min-height: 100vh;
 }
 
+/* Dark mode: keep the whole page dark — including the rubber-band/overscroll
+   areas at the very top and bottom of the screen (light mode is unchanged). */
+html[data-theme='dark'],
+html[data-theme='dark'] body {
+  background-color: #09090b;
+}
+
 /* ---------- Typography helpers ---------- */
 .font-display {
   font-family: var(--font-display);

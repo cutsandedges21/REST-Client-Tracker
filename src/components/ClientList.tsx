@@ -72,7 +72,7 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
   }
 
   return viewMode === 'cards' ? (
-    <section className="grid gap-4 lg:grid-cols-2">
+    <section className="grid gap-4">
       <AnimatePresence>
         {clients.map((client) => {
           const nextAppointment = getNextAppointment(client.id, appointments)

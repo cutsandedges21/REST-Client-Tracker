@@ -19,7 +19,7 @@ export function AppNav({ active, onChange, variant }: AppNavProps) {
   if (variant === 'top') {
     return (
       <nav className="hidden md:flex">
-        <div className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/70 p-1 shadow-sm backdrop-blur">
+        <div className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/70 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-[#18181b]/70">
           {ITEMS.map(({ tab, label, Icon }) => {
             const isActive = active === tab
             return (
@@ -43,7 +43,7 @@ export function AppNav({ active, onChange, variant }: AppNavProps) {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/85 backdrop-blur-lg md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/85 backdrop-blur-lg dark:border-white/10 dark:bg-[#0f0f12]/95 md:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-safe">
         {ITEMS.map(({ tab, label, Icon }) => {
           const isActive = active === tab

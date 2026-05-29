@@ -35,7 +35,7 @@ export function EarningsChart({ clients }: EarningsChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={72} />
+              <XAxis dataKey="name" tick={false} axisLine={false} tickLine={false} height={8} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
               <Tooltip
                 formatter={(value) => [formatCurrency(typeof value === 'number' ? value : Number(value)), 'Est. monthly']}

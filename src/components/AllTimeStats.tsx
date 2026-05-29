@@ -92,7 +92,7 @@ function Tile({
     <div className="rounded-xl border border-slate-200/70 bg-white p-4">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">{label}</p>
       <p
-        className={`stat-figure mt-2 text-[1.6rem] sm:text-3xl ${color ? '' : 'text-slate-900'}`}
+        className={`stat-figure mt-2 text-xl sm:text-2xl ${color ? '' : 'text-slate-900'}`}
         style={color ? { color } : undefined}
       >
         {children}

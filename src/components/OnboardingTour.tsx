@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { primaryButtonClass, primaryButtonStyle } from '../lib/ui'
@@ -94,19 +94,20 @@ export function OnboardingTour({ steps, onFinish }: { steps: TourStep[]; onFinis
     ? { top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }
     : null
 
-  // Tooltip placement: below the hole if it's in the top half, otherwise above.
-  const cardW = Math.min(360, (typeof window !== 'undefined' ? window.innerWidth : 360) - 32)
-  let cardStyle: React.CSSProperties = {}
+  // Card is pinned to the top or bottom edge (whichever is away from the hole),
+  // centred horizontally and height-capped — so it can never run off-screen.
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 390
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+  const cardW = Math.min(380, vw - 24)
+  let posStyle: CSSProperties = { width: cardW, maxHeight: 'calc(100dvh - 2rem)' }
+  let centerClass = 'left-1/2 -translate-x-1/2'
   if (!hole) {
-    cardStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: cardW }
+    posStyle = { ...posStyle, top: '50%' }
+    centerClass = 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+  } else if (hole.top + hole.height / 2 > vh * 0.5) {
+    posStyle = { ...posStyle, top: 16 }
   } else {
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const left = Math.min(Math.max(hole.left, 16), vw - cardW - 16)
-    const below = hole.top + hole.height < vh / 2
-    cardStyle = below
-      ? { top: hole.top + hole.height + 14, left, width: cardW }
-      : { bottom: vh - hole.top + 14, left, width: cardW }
+    posStyle = { ...posStyle, bottom: 16 }
   }
 
   return createPortal(
@@ -133,11 +134,11 @@ export function OnboardingTour({ steps, onFinish }: { steps: TourStep[]; onFinis
       <AnimatePresence mode="wait">
         <motion.div
           key={index}
-          className="absolute rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
-          style={cardStyle}
-          initial={{ opacity: 0, y: 8, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -6, scale: 0.98 }}
+          className={`absolute ${centerClass} overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10`}
+          style={posStyle}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
         >
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'rgb(var(--color-primary))' }}>

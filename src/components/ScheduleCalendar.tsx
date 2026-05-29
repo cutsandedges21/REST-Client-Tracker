@@ -198,7 +198,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500">
+        <div className="mt-4 grid grid-cols-7 gap-1.5 text-center text-xs font-medium text-slate-500">
           {weekdayLabels.map((d) => (
             <div key={d} className="py-2">
               {d}
@@ -206,10 +206,10 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {cells.map((cell, idx) => {
             if (!cell.key) {
-              return <div key={`empty-${idx}`} className="min-h-[4.5rem] rounded-lg bg-slate-50/50" />
+              return <div key={`empty-${idx}`} className="min-h-[5.5rem] rounded-lg bg-slate-50/50 dark:bg-white/5 sm:min-h-[7rem]" />
             }
             const dayKey = cell.key
             const slots = slotsByDate.get(dayKey) ?? []
@@ -222,7 +222,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
                 key={dayKey}
                 type="button"
                 onClick={() => selectDay(dayKey)}
-                className={`flex min-h-[4.5rem] flex-col rounded-lg border p-1.5 text-left transition ${isSelected
+                className={`flex min-h-[5.5rem] flex-col rounded-lg border p-2 text-left transition sm:min-h-[7rem] ${isSelected
                   ? 'border-[var(--color-primary)] ring-2'
                   : 'border-slate-200 bg-white'
                   } ${isToday && !isSelected ? 'ring-1 ring-[var(--color-primary)]' : ''}`}
@@ -230,7 +230,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
                   backgroundColor: `rgba(var(--color-primary-light), 0.5)`
                 } : {}}
               >
-                <span className="text-xs font-semibold" style={{ color: `rgb(var(--color-primary-dark))` }}>{parseDateKey(dayKey).getDate()}</span>
+                <span className="text-sm font-semibold" style={{ color: `rgb(var(--color-primary-dark))` }}>{parseDateKey(dayKey).getDate()}</span>
                 <div className="mt-1 flex flex-1 flex-col gap-0.5 overflow-hidden">
                   {slots.slice(0, 2).map((s) => (
                     <span
@@ -251,7 +251,7 @@ export function ScheduleCalendar({ clients, appointments, onAdd, onUpdate, onRem
           })}
         </div>
 
-        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
           {editDraft && originalSlot ? (
             <div className="space-y-3">
               <p className="text-sm font-medium text-slate-800">Edit appointment</p>
