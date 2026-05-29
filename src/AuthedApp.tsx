@@ -75,9 +75,14 @@ export function AuthedApp() {
     saveAndClear,
   } = useClientStore()
 
+  // One-time clients are tracked separately: excluded from the client count,
+  // the main list and projections; shown in their own section instead.
+  const recurringClients = useMemo(() => clients.filter((c) => c.serviceFrequency !== 'one_time'), [clients])
+  const oneTimeClientsAll = useMemo(() => clients.filter((c) => c.serviceFrequency === 'one_time'), [clients])
+
   const currentPlan = getPlan(plan)
   const atClientLimit =
-    currentPlan.clientLimit !== null && !isSpecialUser(username) && clients.length >= currentPlan.clientLimit
+    currentPlan.clientLimit !== null && !isSpecialUser(username) && recurringClients.length >= currentPlan.clientLimit
 
   // Sync auth context -> store. Triggers initial data fetch (load-on-login).
   useEffect(() => {
@@ -172,14 +177,20 @@ export function AuthedApp() {
   ]
 
   const filteredClients = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
-    if (!query) return clients
-    return clients.filter((client) =>
-      [client.fullName, client.phone, client.email, client.address].some((value) =>
-        String(value).toLowerCase().includes(query),
-      ),
+    const q = searchTerm.trim().toLowerCase()
+    if (!q) return recurringClients
+    return recurringClients.filter((c) =>
+      [c.fullName, c.phone, c.email, c.address].some((v) => String(v).toLowerCase().includes(q)),
     )
-  }, [clients, searchTerm])
+  }, [recurringClients, searchTerm])
+
+  const filteredOneTime = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase()
+    if (!q) return oneTimeClientsAll
+    return oneTimeClientsAll.filter((c) =>
+      [c.fullName, c.phone, c.email, c.address].some((v) => String(v).toLowerCase().includes(q)),
+    )
+  }, [oneTimeClientsAll, searchTerm])
 
   const metrics = useMemo(() => getDashboardMetrics(filteredClients), [filteredClients])
 
@@ -297,7 +308,7 @@ export function AuthedApp() {
                   </div>
                   <DashboardStats {...metrics} />
                   <ProfitChart completedJobs={completedJobs} />
-                  <EarningsChart clients={clients} />
+                  <EarningsChart clients={recurringClients} />
                 </>
               )}
 
@@ -306,16 +317,16 @@ export function AuthedApp() {
                   <SearchHero
                     value={searchTerm}
                     onChange={setSearchTerm}
-                    totalClients={clients.length}
+                    totalClients={recurringClients.length}
                     visibleClients={filteredClients.length}
                   />
 
                   <GlowCard>
                     <div className="flex items-center justify-between gap-3 p-3 sm:p-4">
                       <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
-                        {filteredClients.length === clients.length
-                          ? `${clients.length} ${clients.length === 1 ? 'client' : 'clients'}`
-                          : `${filteredClients.length} of ${clients.length}`}
+                        {filteredClients.length === recurringClients.length
+                          ? `${recurringClients.length} ${recurringClients.length === 1 ? 'client' : 'clients'}`
+                          : `${filteredClients.length} of ${recurringClients.length}`}
                       </p>
                       <div className="inline-flex rounded-xl border border-slate-300 p-1">
                         <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
@@ -337,6 +348,26 @@ export function AuthedApp() {
                     onCompleteJob={handleCompleteJob}
                     onInvoice={setInvoicingClient}
                   />
+
+                  {filteredOneTime.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-baseline gap-2 px-1">
+                        <h2 className="font-display text-xl font-semibold" style={{ color: 'rgb(var(--color-primary-dark))' }}>
+                          One-time clients
+                        </h2>
+                        <span className="text-xs font-medium text-slate-500">{oneTimeClientsAll.length}</span>
+                      </div>
+                      <ClientList
+                        clients={filteredOneTime}
+                        appointments={appointments}
+                        viewMode="cards"
+                        onRemove={setPendingDelete}
+                        onEdit={setEditingClient}
+                        onCompleteJob={handleCompleteJob}
+                        onInvoice={setInvoicingClient}
+                      />
+                    </div>
+                  )}
 
                   <div data-tour="clients-add">
                     <ClientForm

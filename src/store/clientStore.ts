@@ -227,7 +227,9 @@ export const useClientStore = create<ClientState>((set, get) => {
       const { userId, username, plan, clients } = get()
       if (!userId || !username) throw new Error('Not signed in')
 
-      if (!isSpecialUser(username) && plan === 'free' && clients.length >= 3) {
+      // One-time clients don't count toward the free-plan limit and are never blocked.
+      const recurringCount = clients.filter((c) => c.serviceFrequency !== 'one_time').length
+      if (!isSpecialUser(username) && plan === 'free' && data.serviceFrequency !== 'one_time' && recurringCount >= 3) {
         throw new Error('Client limit reached. Upgrade to Pro for unlimited clients.')
       }
 

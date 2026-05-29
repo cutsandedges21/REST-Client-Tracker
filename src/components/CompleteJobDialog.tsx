@@ -132,17 +132,18 @@ export function CompleteJobDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-40 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-40 overflow-y-auto bg-slate-950/35 backdrop-blur-sm"
         >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 14 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            transition={{ duration: 0.22 }}
-            className="w-full max-w-md"
-          >
-            <GlowCard>
-              <div className="p-5">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 14 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.22 }}
+              className="w-full max-w-md"
+            >
+              <GlowCard>
+                <div className="p-5">
                 <h2 className="text-lg font-semibold text-slate-900">Complete Job</h2>
                 <form onSubmit={handleSubmit}>
                   <div className="mt-4 grid gap-4">
@@ -253,7 +254,8 @@ export function CompleteJobDialog({
                 </form>
               </div>
             </GlowCard>
-          </motion.div>
+            </motion.div>
+          </div>
         </motion.div>
       ) : null}
     </AnimatePresence>
