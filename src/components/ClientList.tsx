@@ -72,7 +72,7 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
   }
 
   return viewMode === 'cards' ? (
-    <section className="grid gap-4">
+    <section className="grid grid-cols-1 gap-4">
       <AnimatePresence>
         {clients.map((client) => {
           const nextAppointment = getNextAppointment(client.id, appointments)
@@ -80,6 +80,7 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
           return (
             <motion.div
               key={client.id}
+              className="min-w-0"
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -94,7 +95,7 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
                         href={mapsUrl(client.address)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 block text-sm underline decoration-[var(--color-primary-light)] underline-offset-2 transition hover:opacity-80"
+                        className="mt-1 block break-words text-sm underline decoration-[var(--color-primary-light)] underline-offset-2 transition hover:opacity-80"
                         style={{ color: `var(--color-primary-dark)` }}
                       >
                         {client.address}
@@ -137,17 +138,17 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
 
                   <div className="mt-4 grid gap-2 text-sm text-slate-700">
                     {client.phone ? (
-                      <a href={telHref(client.phone)} className="flex items-center gap-2 underline decoration-[var(--color-primary-light)] underline-offset-2 transition hover:opacity-80" style={{ color: `var(--color-primary-dark)` }}>
+                      <a href={telHref(client.phone)} className="flex min-w-0 items-center gap-2 underline decoration-[var(--color-primary-light)] underline-offset-2 transition hover:opacity-80" style={{ color: `var(--color-primary-dark)` }}>
                         <Phone className="h-4 w-4 shrink-0" style={{ color: `var(--color-primary-dark)` }} />
-                        <span>{client.phone}</span>
+                        <span className="min-w-0 break-all">{client.phone}</span>
                       </a>
                     ) : (
                       <InfoRow icon={Phone} text="Phone not on file" muted />
                     )}
                     {client.email ? (
-                      <a href={`mailto:${client.email}`} className="flex items-center gap-2 underline decoration-[var(--color-primary-light)] underline-offset-2 transition hover:opacity-80" style={{ color: `var(--color-primary-dark)` }}>
+                      <a href={`mailto:${client.email}`} className="flex min-w-0 items-center gap-2 underline decoration-[var(--color-primary-light)] underline-offset-2 transition hover:opacity-80" style={{ color: `var(--color-primary-dark)` }}>
                         <Mail className="h-4 w-4 shrink-0" style={{ color: `var(--color-primary-dark)` }} />
-                        <span>{client.email}</span>
+                        <span className="min-w-0 break-all">{client.email}</span>
                       </a>
                     ) : (
                       <InfoRow icon={Mail} text="Email not on file" muted />
@@ -307,9 +308,9 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
 
 function InfoRow({ icon: Icon, text, muted }: { icon: typeof Phone; text: string; muted?: boolean }) {
   return (
-    <p className={cn('flex items-center gap-2', muted && 'text-slate-500')}>
+    <p className={cn('flex min-w-0 items-center gap-2', muted && 'text-slate-500')}>
       <Icon className="h-4 w-4 shrink-0" style={{ color: `var(--color-primary-dark)` }} />
-      <span>{text}</span>
+      <span className="min-w-0 break-words">{text}</span>
     </p>
   )
 }
