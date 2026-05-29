@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { GlowCard } from './GlowCard'
 import { AnimatedBackground } from './AnimatedBackground'
+import { IntroAnimation } from './IntroAnimation'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -42,6 +44,22 @@ export function LoginScreen({ mode = 'login' }: Props) {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [confirmationSent, setConfirmationSent] = useState(false)
+  const [showIntro, setShowIntro] = useState(() => {
+    try {
+      return sessionStorage.getItem('rest-intro-seen') !== '1'
+    } catch {
+      return true
+    }
+  })
+
+  const dismissIntro = () => {
+    try {
+      sessionStorage.setItem('rest-intro-seen', '1')
+    } catch {
+      // ignore
+    }
+    setShowIntro(false)
+  }
 
   useEffect(() => {
     setIsRegistering(mode === 'signup')
@@ -128,13 +146,8 @@ export function LoginScreen({ mode = 'login' }: Props) {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
+      <AnimatePresence>{showIntro && <IntroAnimation onDone={dismissIntro} />}</AnimatePresence>
       <AnimatedBackground />
-      <Link
-        to="/"
-        className="absolute left-4 top-4 z-20 rounded-full border border-white/30 bg-white/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 backdrop-blur-md transition hover:bg-white/50 sm:left-6 sm:top-6 sm:text-xs dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20"
-      >
-        ← Back
-      </Link>
       <div className="relative z-10 w-full flex justify-center">
         <GlowCard>
           <div className="w-full max-w-md p-5 sm:p-7 md:p-8">

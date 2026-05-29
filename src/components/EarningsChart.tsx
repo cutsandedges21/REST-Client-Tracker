@@ -1,5 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { formatCurrency, getDashboardMetrics, getMonthlyRevenue } from '../lib/finance'
+import { formatCurrency, getMonthlyRevenue } from '../lib/finance'
 import type { Client } from '../types/client'
 import { GlowCard } from './GlowCard'
 
@@ -8,7 +8,6 @@ interface EarningsChartProps {
 }
 
 export function EarningsChart({ clients }: EarningsChartProps) {
-  const metrics = getDashboardMetrics(clients)
   const data = clients.map((c) => ({
     name: c.fullName.length > 18 ? `${c.fullName.slice(0, 18)}…` : c.fullName,
     monthly: Number(getMonthlyRevenue(c).toFixed(2)),

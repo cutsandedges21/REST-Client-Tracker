@@ -1,6 +1,13 @@
-export type LawnSizeCategory = 'small' | 'medium' | 'large'
+export type ServiceFrequency =
+  | 'one_time'
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'six_weeks'
+  | 'two_months'
 
-export type ServiceFrequency = 'weekly' | 'biweekly' | 'three_weeks' | 'monthly'
+/** How `expensePerClient` is interpreted. */
+export type ExpenseType = 'fixed' | 'percent'
 
 export interface Client {
   id: string
@@ -9,9 +16,15 @@ export interface Client {
   phone: string
   email: string
   address: string
-  /** Flat amount charged per lawn cut (CAD) */
+  /** Flat amount charged per visit (CAD) */
   perCutRate: number
+  /**
+   * Either a flat dollar amount (when expenseType === 'fixed') or a percentage
+   * of `perCutRate` (when expenseType === 'percent'). Use the helpers in
+   * lib/finance.ts to resolve the effective dollar cost.
+   */
   expensePerClient: number
+  expenseType: ExpenseType
   cutDurationMinutes: number
   serviceFrequency: ServiceFrequency
   notes?: string
@@ -26,6 +39,7 @@ export interface ClientFormInput {
   address: string
   perCutRate: number
   expensePerClient: number
+  expenseType: ExpenseType
   cutDurationMinutes: number
   serviceFrequency: ServiceFrequency
   notes?: string

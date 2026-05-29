@@ -3,11 +3,17 @@ import type {
   AppointmentRow,
   ClientRow,
   CompletedJobRow,
+  ExpenseRow,
   PlanTier,
   ProfileRow,
 } from '../types/database'
-import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
+import type { Client, ClientFormInput, ExpenseType, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
+import type { Expense, ExpenseFormInput } from '../types/expense'
+
+// Select all columns so the app keeps working even before the latest migration
+// has been applied (missing columns simply come back undefined).
+const PROFILE_COLUMNS = '*'
 
 // ---------------- Mappers ----------------
 
@@ -21,6 +27,7 @@ export function clientFromRow(row: ClientRow, username: string): Client {
     address: row.address ?? '',
     perCutRate: Number(row.per_cut_rate),
     expensePerClient: Number(row.expense_per_client),
+    expenseType: (row.expense_type ?? 'fixed') as ExpenseType,
     cutDurationMinutes: Number(row.cut_duration_minutes),
     serviceFrequency: row.service_frequency,
     notes: row.notes ?? undefined,
@@ -56,6 +63,18 @@ export function completedJobFromRow(row: CompletedJobRow, username: string): Com
   }
 }
 
+export function expenseFromRow(row: ExpenseRow, username: string): Expense {
+  return {
+    id: row.id,
+    username,
+    description: row.description,
+    amount: Number(row.amount),
+    date: row.date,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
 function clientFormToRow(input: ClientFormInput, userId: string) {
   return {
     user_id: userId,
@@ -65,6 +84,7 @@ function clientFormToRow(input: ClientFormInput, userId: string) {
     address: input.address ?? '',
     per_cut_rate: input.perCutRate,
     expense_per_client: input.expensePerClient,
+    expense_type: input.expenseType,
     cut_duration_minutes: input.cutDurationMinutes,
     service_frequency: input.serviceFrequency,
     notes: input.notes?.trim() ? input.notes.trim() : null,
@@ -76,21 +96,18 @@ function clientFormToRow(input: ClientFormInput, userId: string) {
 export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, account_name, plan, created_at')
+    .select(PROFILE_COLUMNS)
     .eq('id', userId)
     .maybeSingle()
   if (error) {
     console.error('[api] fetchProfile failed:', error)
     return null
   }
-  return data
+  return data as ProfileRow | null
 }
 
 export async function updateProfilePlan(userId: string, plan: PlanTier): Promise<void> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ plan })
-    .eq('id', userId)
+  const { error } = await supabase.from('profiles').update({ plan }).eq('id', userId)
   if (error) {
     console.error('[api] updateProfilePlan failed:', error)
     throw error
@@ -107,6 +124,21 @@ export async function updateProfileAccountName(
     .eq('id', userId)
   if (error) {
     console.error('[api] updateProfileAccountName failed:', error)
+    throw error
+  }
+}
+
+export async function updateProfileInvoiceSettings(
+  userId: string,
+  settings: { invoiceTemplate?: string | null; businessName?: string | null },
+): Promise<void> {
+  const patch: Record<string, unknown> = {}
+  if (settings.invoiceTemplate !== undefined) patch.invoice_template = settings.invoiceTemplate
+  if (settings.businessName !== undefined) patch.business_name = settings.businessName
+  if (Object.keys(patch).length === 0) return
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
+  if (error) {
+    console.error('[api] updateProfileInvoiceSettings failed:', error)
     throw error
   }
 }
@@ -149,6 +181,7 @@ export async function updateClientRow(
     address: input.address ?? '',
     per_cut_rate: input.perCutRate,
     expense_per_client: input.expensePerClient,
+    expense_type: input.expenseType,
     cut_duration_minutes: input.cutDurationMinutes,
     service_frequency: input.serviceFrequency,
     notes: input.notes?.trim() ? input.notes.trim() : null,
@@ -179,6 +212,7 @@ export async function restoreClientRow(userId: string, client: Client): Promise<
     address: client.address,
     per_cut_rate: client.perCutRate,
     expense_per_client: client.expensePerClient,
+    expense_type: client.expenseType,
     cut_duration_minutes: client.cutDurationMinutes,
     service_frequency: client.serviceFrequency,
     notes: client.notes ?? null,
@@ -311,5 +345,54 @@ export async function updateCompletedJobRow(
 
 export async function deleteCompletedJob(id: string): Promise<void> {
   const { error } = await supabase.from('completed_jobs').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------------- Expenses ----------------
+
+export async function fetchExpenses(userId: string, username: string): Promise<Expense[]> {
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((row) => expenseFromRow(row as ExpenseRow, username))
+}
+
+export async function insertExpense(
+  userId: string,
+  username: string,
+  input: ExpenseFormInput,
+): Promise<Expense> {
+  const { data, error } = await supabase
+    .from('expenses')
+    .insert({
+      user_id: userId,
+      description: input.description.trim(),
+      amount: input.amount,
+      date: input.date ?? new Date().toISOString().split('T')[0],
+    })
+    .select('*')
+    .single()
+  if (error) throw error
+  return expenseFromRow(data as ExpenseRow, username)
+}
+
+export async function deleteExpenseRow(id: string): Promise<void> {
+  const { error } = await supabase.from('expenses').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function restoreExpenseRow(userId: string, expense: Expense): Promise<void> {
+  const { error } = await supabase.from('expenses').insert({
+    id: expense.id,
+    user_id: userId,
+    description: expense.description,
+    amount: expense.amount,
+    date: expense.date,
+    created_at: expense.createdAt,
+    updated_at: expense.updatedAt,
+  })
   if (error) throw error
 }

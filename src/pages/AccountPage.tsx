@@ -51,12 +51,13 @@ export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
       // explicitly avoids any race in the UI.
       await supabase.from('appointments').delete().eq('user_id', user.id)
       await supabase.from('completed_jobs').delete().eq('user_id', user.id)
+      await supabase.from('expenses').delete().eq('user_id', user.id)
       await supabase.from('clients').delete().eq('user_id', user.id)
 
-      // Local per-device caches (one-time tasks, expenses, email/EmailJS config)
-      // remain device-local. Wipe them too on full reset for parity.
+      // Clear the local snapshot cache + any legacy per-device keys.
       const u = username
       if (u) {
+        localStorage.removeItem(`rest-cache-${u}`)
         localStorage.removeItem(`oneTimeTasks_${u}`)
         localStorage.removeItem(`expenses_${u}`)
         localStorage.removeItem(`userEmail_${u}`)

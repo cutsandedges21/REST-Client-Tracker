@@ -18,11 +18,17 @@ create table if not exists public.profiles (
   username text unique not null,
   account_name text,
   plan text not null default 'free' check (plan in ('free','pro','enterprise')),
+  invoice_template text,
+  business_name text,
+  stripe_customer_id text,
   created_at timestamptz not null default now()
 );
 
--- account_name added after initial release; backfill for existing tables.
+-- Columns added after initial release; backfill for existing tables.
 alter table public.profiles add column if not exists account_name text;
+alter table public.profiles add column if not exists invoice_template text;
+alter table public.profiles add column if not exists business_name text;
+alter table public.profiles add column if not exists stripe_customer_id text;
 
 alter table public.profiles enable row level security;
 
@@ -52,13 +58,30 @@ create table if not exists public.clients (
   address text not null default '',
   per_cut_rate numeric not null default 0,
   expense_per_client numeric not null default 0,
+  expense_type text not null default 'fixed' check (expense_type in ('fixed','percent')),
   cut_duration_minutes integer not null default 0,
   service_frequency text not null default 'weekly'
-    check (service_frequency in ('weekly','biweekly','three_weeks','monthly')),
+    check (service_frequency in ('one_time','weekly','biweekly','monthly','six_weeks','two_months')),
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- expense_type added after initial release; backfill for existing tables.
+alter table public.clients add column if not exists expense_type text not null default 'fixed';
+
+-- Service-frequency options changed: 'three_weeks' removed; 'one_time',
+-- 'six_weeks', 'two_months' added. Migrate any existing 'three_weeks' rows to
+-- 'monthly' (same monthly multiplier), then swap the CHECK constraint.
+update public.clients set service_frequency = 'monthly' where service_frequency = 'three_weeks';
+alter table public.clients drop constraint if exists clients_service_frequency_check;
+alter table public.clients
+  add constraint clients_service_frequency_check
+  check (service_frequency in ('one_time','weekly','biweekly','monthly','six_weeks','two_months'));
+alter table public.clients drop constraint if exists clients_expense_type_check;
+alter table public.clients
+  add constraint clients_expense_type_check
+  check (expense_type in ('fixed','percent'));
 
 create index if not exists clients_user_id_idx on public.clients(user_id);
 create index if not exists clients_user_updated_idx on public.clients(user_id, updated_at desc);
@@ -169,6 +192,45 @@ create policy "completed_jobs_delete_own"
   using (user_id = auth.uid());
 
 -- ----------------------------------------------------------------------------
+-- expenses (business expenses: gas, equipment, supplies, etc.)
+-- ----------------------------------------------------------------------------
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  description text not null default '',
+  amount numeric not null default 0,
+  date date not null default current_date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists expenses_user_idx on public.expenses(user_id);
+create index if not exists expenses_user_date_idx on public.expenses(user_id, date desc);
+
+alter table public.expenses enable row level security;
+
+drop policy if exists "expenses_select_own" on public.expenses;
+create policy "expenses_select_own"
+  on public.expenses for select
+  using (user_id = auth.uid());
+
+drop policy if exists "expenses_insert_own" on public.expenses;
+create policy "expenses_insert_own"
+  on public.expenses for insert
+  with check (user_id = auth.uid());
+
+drop policy if exists "expenses_update_own" on public.expenses;
+create policy "expenses_update_own"
+  on public.expenses for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists "expenses_delete_own" on public.expenses;
+create policy "expenses_delete_own"
+  on public.expenses for delete
+  using (user_id = auth.uid());
+
+-- ----------------------------------------------------------------------------
 -- updated_at trigger
 -- ----------------------------------------------------------------------------
 create or replace function public.touch_updated_at()
@@ -189,6 +251,11 @@ create trigger clients_touch_updated_at
 drop trigger if exists completed_jobs_touch_updated_at on public.completed_jobs;
 create trigger completed_jobs_touch_updated_at
   before update on public.completed_jobs
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists expenses_touch_updated_at on public.expenses;
+create trigger expenses_touch_updated_at
+  before update on public.expenses
   for each row execute function public.touch_updated_at();
 
 -- ----------------------------------------------------------------------------

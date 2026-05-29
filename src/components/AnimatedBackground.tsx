@@ -76,9 +76,6 @@ export function AnimatedBackground() {
         ))}
       </div>
 
-      {/* Subtle Noise/Grain Overlay for "Premium" feel */}
-      <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.015] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-      
       {/* Vignette effect */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.45)_100%)]" />
     </div>

@@ -2,11 +2,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import { clientSchema, type ClientSchema } from '../lib/validation'
+import type { ExpenseType, ServiceFrequency } from '../types/client'
 import { cn } from '../lib/utils'
+import { inputClass, labelClass, primaryButtonClass, primaryButtonStyle } from '../lib/ui'
 import { GlowCard } from './GlowCard'
-import { useAuth } from '../contexts/AuthContext'
+import { Segmented } from './Segmented'
 
 interface ClientFormProps {
   onSubmit: (values: ClientSchema) => Promise<string>
@@ -15,16 +18,33 @@ interface ClientFormProps {
   onUpgradeRequired?: () => void
 }
 
-const inputClass =
-  'w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]'
+const FREQUENCY_OPTIONS: { value: ServiceFrequency; label: string }[] = [
+  { value: 'one_time', label: 'One-time' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Bi-weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'six_weeks', label: 'Every 6 weeks' },
+  { value: 'two_months', label: 'Every 2 months' },
+]
+
+const TIME_OPTIONS = Array.from({ length: 30 }, (_, i) => {
+  const total = 8 * 60 + i * 30 // 08:00 → 22:30 in 30-min steps
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  const label = `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+  return { value, label }
+})
 
 export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeRequired }: ClientFormProps) {
-  const { profile } = useAuth()
-  const username = profile?.username
   const [timeUnit, setTimeUnit] = useState<'minutes' | 'hours'>('minutes')
+  const [expenseType, setExpenseType] = useState<ExpenseType>('fixed')
   const [scheduleClient, setScheduleClient] = useState(false)
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('')
+
   const {
     register,
     handleSubmit,
@@ -37,38 +57,45 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
       phone: '',
       email: '',
       expensePerClient: 0,
+      expenseType: 'fixed',
     },
   })
 
-  const submit = async (values: ClientSchema) => {
-    console.log('[DEBUG] ClientForm submit called with values:', values)
-    try {
-      // Convert hours to minutes if needed
-      const processedValues = {
-        ...values,
-        cutDurationMinutes: timeUnit === 'hours' ? values.cutDurationMinutes * 60 : values.cutDurationMinutes,
-      }
-      const clientId = await onSubmit(processedValues)
-      console.log('[DEBUG] ClientForm submit completed successfully, clientId:', clientId)
+  const resetForm = () => {
+    reset({
+      serviceFrequency: 'weekly',
+      phone: '',
+      email: '',
+      expensePerClient: 0,
+      expenseType: 'fixed',
+    })
+    setTimeUnit('minutes')
+    setExpenseType('fixed')
+    setScheduleClient(false)
+    setScheduleDate('')
+    setScheduleTime('')
+  }
 
-      // Schedule the client if option is selected
+  const submit = async (values: ClientSchema) => {
+    try {
+      const processed: ClientSchema = {
+        ...values,
+        expenseType,
+        cutDurationMinutes:
+          timeUnit === 'hours'
+            ? Math.round(values.cutDurationMinutes * 60)
+            : Math.round(values.cutDurationMinutes),
+      }
+      const clientId = await onSubmit(processed)
+
       if (scheduleClient && onSchedule && scheduleDate && scheduleTime && clientId) {
-        console.log('[DEBUG] Scheduling client for:', scheduleDate, scheduleTime)
         await onSchedule(clientId, scheduleDate, scheduleTime)
       }
 
-      reset({
-        serviceFrequency: 'weekly',
-        phone: '',
-        email: '',
-        expensePerClient: 0,
-      })
-      setScheduleClient(false)
-      setScheduleDate('')
-      setScheduleTime('')
+      resetForm()
+      toast.success('Client added')
     } catch (error) {
-      console.error('[ERROR] ClientForm submit failed:', error)
-      throw error
+      toast.error(error instanceof Error ? error.message : 'Could not add client')
     }
   }
 
@@ -76,12 +103,14 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
       <GlowCard>
         <div className="p-5 md:p-6">
-          <h2 className="text-xl font-semibold tracking-tight" style={{ color: `rgb(var(--color-primary-dark))` }}>Add New Client</h2>
+          <h2 className="font-display text-2xl font-semibold" style={{ color: `rgb(var(--color-primary-dark))` }}>
+            Add client
+          </h2>
           <p className="mt-1 text-sm text-slate-600">
-            Frequency and rate are used to estimate your monthly total. Phone and email are optional.
+            Rate and frequency drive your monthly projection. Phone and email are optional.
           </p>
 
-          {atLimit && username !== 'mb08' && username !== 'jt08' && (
+          {atLimit && (
             <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               <span className="mt-0.5 text-base">⚡</span>
               <div className="flex-1">
@@ -98,103 +127,128 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
             </div>
           )}
 
-          <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(submit)}>
+          <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit(submit)}>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Full Name *</span>
-              <input className={inputClass} placeholder="Mossimo Bianco" {...register('fullName')} />
+              <span className={labelClass}>Full name *</span>
+              <input className={inputClass} placeholder="Jordan Smith" {...register('fullName')} />
               <FieldError error={errors.fullName?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Phone (optional)</span>
-              <input className={inputClass} placeholder="Leave blank if you don&apos;t have it" {...register('phone')} />
-              <FieldError error={errors.phone?.message} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Email (optional)</span>
-              <input className={inputClass} placeholder="Leave blank if you don&apos;t have it" {...register('email')} />
-              <FieldError error={errors.email?.message} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Address *</span>
+              <span className={labelClass}>Address *</span>
               <input className={inputClass} placeholder="123 Main St" {...register('address')} />
               <FieldError error={errors.address?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Job Cost (CAD) *</span>
-              <input type="number" min={0} step="0.01" className={inputClass} {...register('perCutRate')} />
+              <span className={labelClass}>Phone (optional)</span>
+              <input className={inputClass} inputMode="tel" placeholder="Leave blank if unknown" {...register('phone')} />
+              <FieldError error={errors.phone?.message} />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className={labelClass}>Email (optional)</span>
+              <input className={inputClass} inputMode="email" placeholder="Used for invoices" {...register('email')} />
+              <FieldError error={errors.email?.message} />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className={labelClass}>Rate per visit (CAD) *</span>
+              <input type="number" min={0} step="0.01" inputMode="decimal" className={inputClass} {...register('perCutRate')} />
               <FieldError error={errors.perCutRate?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Expense per Client (CAD) *</span>
-              <input type="number" min={0} step="0.01" className={inputClass} {...register('expensePerClient', { valueAsNumber: true })} />
-              <FieldError error={errors.expensePerClient?.message} />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Service Frequency *</span>
+              <span className={labelClass}>Service frequency *</span>
               <select className={inputClass} {...register('serviceFrequency')}>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Bi-weekly</option>
-                <option value="three_weeks">Every 3 weeks</option>
-                <option value="monthly">Once a month</option>
+                {FREQUENCY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
               </select>
               <FieldError error={errors.serviceFrequency?.message} />
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Service Duration *</span>
-              <div className="flex gap-2">
+              <span className={labelClass}>
+                Expense per visit {expenseType === 'percent' ? '(% of rate)' : '(CAD)'}
+              </span>
+              <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min={0}
                   step="0.01"
+                  inputMode="decimal"
+                  className={inputClass}
+                  placeholder={expenseType === 'percent' ? '20' : '0.00'}
+                  {...register('expensePerClient', { valueAsNumber: true })}
+                />
+                <Segmented<ExpenseType>
+                  ariaLabel="Expense type"
+                  value={expenseType}
+                  onChange={setExpenseType}
+                  options={[
+                    { value: 'fixed', label: '$' },
+                    { value: 'percent', label: '%' },
+                  ]}
+                />
+              </div>
+              <FieldError error={errors.expensePerClient?.message} />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className={labelClass}>Service duration *</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
                   className={inputClass}
                   placeholder={timeUnit === 'hours' ? '1.5' : '90'}
                   {...register('cutDurationMinutes', { valueAsNumber: true })}
                 />
-                <select
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                <Segmented<'minutes' | 'hours'>
+                  ariaLabel="Duration unit"
                   value={timeUnit}
-                  onChange={(e) => setTimeUnit(e.target.value as 'minutes' | 'hours')}
-                >
-                  <option value="minutes">Minutes</option>
-                  <option value="hours">Hours</option>
-                </select>
+                  onChange={setTimeUnit}
+                  options={[
+                    { value: 'minutes', label: 'Min' },
+                    { value: 'hours', label: 'Hr' },
+                  ]}
+                />
               </div>
               <FieldError error={errors.cutDurationMinutes?.message} />
             </label>
 
-            <label className="space-y-1.5 md:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Notes (optional)</span>
+            <label className="space-y-1.5 sm:col-span-2">
+              <span className={labelClass}>Notes (optional)</span>
               <textarea
-                rows={3}
+                rows={2}
                 className={cn(inputClass, 'resize-none')}
-                placeholder="Gate code, dog warning, schedule preference..."
+                placeholder="Gate code, dog warning, schedule preference…"
                 {...register('notes')}
               />
               <FieldError error={errors.notes?.message} />
             </label>
 
-            <div className="md:col-span-2 space-y-4 rounded-lg border border-slate-200 bg-slate-0 p-4">
-              <label className="flex items-center gap-2">
+            <div className="rounded-xl border border-slate-200 p-4 sm:col-span-2">
+              <label className="flex items-center gap-2.5">
                 <input
                   type="checkbox"
                   checked={scheduleClient}
                   onChange={(e) => setScheduleClient(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  className="h-4 w-4 rounded border-slate-300"
+                  style={{ accentColor: 'rgb(var(--color-primary))' }}
                 />
-                <span className="text-sm font-medium text-slate-700">Schedule first appointment</span>
+                <span className={labelClass}>Schedule first appointment</span>
               </label>
 
               {scheduleClient && (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <label className="space-y-1.5">
-                    <span className="text-sm font-medium text-slate-700">Date</span>
+                    <span className={labelClass}>Date</span>
                     <input
                       type="date"
                       className={inputClass}
@@ -203,60 +257,28 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </label>
-
                   <label className="space-y-1.5">
-                    <span className="text-sm font-medium text-slate-700">Time</span>
-                    <select
-                      className={inputClass}
-                      value={scheduleTime}
-                      onChange={(e) => setScheduleTime(e.target.value)}
-                    >
-                      <option value="">Select time...</option>
-                      <option value="08:00">8:00 AM</option>
-                      <option value="08:30">8:30 AM</option>
-                      <option value="09:00">9:00 AM</option>
-                      <option value="09:30">9:30 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="10:30">10:30 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="11:30">11:30 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="12:30">12:30 PM</option>
-                      <option value="13:00">1:00 PM</option>
-                      <option value="13:30">1:30 PM</option>
-                      <option value="14:00">2:00 PM</option>
-                      <option value="14:30">2:30 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="15:30">3:30 PM</option>
-                      <option value="16:00">4:00 PM</option>
-                      <option value="16:30">4:30 PM</option>
-                      <option value="17:00">5:00 PM</option>
-                      <option value="17:30">5:30 PM</option>
-                      <option value="18:00">6:00 PM</option>
-                      <option value="18:30">6:30 PM</option>
-                      <option value="19:00">7:00 PM</option>
-                      <option value="19:30">7:30 PM</option>
-                      <option value="20:00">8:00 PM</option>
-                      <option value="20:30">8:30 PM</option>
-                      <option value="21:00">9:00 PM</option>
-                      <option value="21:30">9:30 PM</option>
-                      <option value="22:00">10:00 PM</option>
-                      <option value="22:30">10:30 PM</option>
-                      <option value="23:00">11:00 PM</option>
-                      <option value="23:30">11:30 PM</option>
+                    <span className={labelClass}>Time</span>
+                    <select className={inputClass} value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)}>
+                      <option value="">Select time…</option>
+                      {TIME_OPTIONS.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
               )}
             </div>
 
-            <div className="md:col-span-2">
-              {atLimit && username !== 'mb08' && username !== 'jt08' ? (
+            <div className="sm:col-span-2">
+              {atLimit ? (
                 <button
                   type="button"
                   onClick={onUpgradeRequired}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white opacity-80 transition hover:opacity-100"
-                  style={{ backgroundColor: `rgb(var(--color-primary))` }}
+                  className={cn(primaryButtonClass, 'w-full opacity-80 hover:opacity-100 sm:w-auto')}
+                  style={primaryButtonStyle}
                 >
                   Upgrade to add more clients
                 </button>
@@ -264,12 +286,10 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70"
-                  style={{ backgroundColor: `rgb(var(--color-primary))` }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary-dark))`}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = `rgb(var(--color-primary))`}
+                  className={cn(primaryButtonClass, 'w-full sm:w-auto')}
+                  style={primaryButtonStyle}
                 >
-                  {isSubmitting ? 'Saving...' : 'Add Client'}
+                  {isSubmitting ? 'Saving…' : 'Add client'}
                 </button>
               )}
             </div>

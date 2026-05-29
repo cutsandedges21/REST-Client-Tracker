@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthState | null>(null)
 async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, account_name, plan, created_at')
+    .select('*')
     .eq('id', userId)
     .maybeSingle()
 
@@ -41,7 +41,7 @@ async function fetchProfile(userId: string): Promise<ProfileRow | null> {
 async function fetchProfileByUsername(username: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, account_name, plan, created_at')
+    .select('*')
     .eq('username', username)
     .maybeSingle()
 
