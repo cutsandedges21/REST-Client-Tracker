@@ -19,6 +19,8 @@ export interface ProfileRow {
   invoice_template: string | null
   /** Business name shown on invoices. */
   business_name: string | null
+  /** Custom hex colour for the invoice email header. Falls back to theme when null. */
+  invoice_accent_color: string | null
   /** Stripe customer id, set after first checkout. */
   stripe_customer_id: string | null
   created_at: string

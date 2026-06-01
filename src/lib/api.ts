@@ -149,11 +149,16 @@ export async function updateProfileAccountName(
 
 export async function updateProfileInvoiceSettings(
   userId: string,
-  settings: { invoiceTemplate?: string | null; businessName?: string | null },
+  settings: {
+    invoiceTemplate?: string | null
+    businessName?: string | null
+    invoiceAccentColor?: string | null
+  },
 ): Promise<void> {
   const patch: Record<string, unknown> = {}
   if (settings.invoiceTemplate !== undefined) patch.invoice_template = settings.invoiceTemplate
   if (settings.businessName !== undefined) patch.business_name = settings.businessName
+  if (settings.invoiceAccentColor !== undefined) patch.invoice_accent_color = settings.invoiceAccentColor
   if (Object.keys(patch).length === 0) return
   const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
   if (error) {

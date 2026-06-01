@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarClock, Clock3, FileText, Mail, MapPin, Pencil, Phone, Trash2, Calendar, Check } from 'lucide-react'
+import { CalendarClock, Clock3, FileText, Mail, MapPin, Pencil, Phone, Trash2, Check } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   formatCurrency,
@@ -10,7 +10,7 @@ import {
 } from '../lib/finance'
 import { serviceFrequencyLabels } from '../lib/labels'
 import { cn } from '../lib/utils'
-import type { Client, ScheduledSlot } from '../types/client'
+import type { Client } from '../types/client'
 import { GlowCard } from './GlowCard'
 
 function mapsUrl(address: string) {
@@ -24,7 +24,6 @@ function telHref(phone: string) {
 
 interface ClientListProps {
   clients: Client[]
-  appointments: ScheduledSlot[]
   viewMode: 'cards' | 'table'
   onRemove: (client: Client) => void
   onEdit: (client: Client) => void
@@ -32,34 +31,12 @@ interface ClientListProps {
   onInvoice?: (client: Client) => void
 }
 
-function getNextAppointment(clientId: string, appointments: ScheduledSlot[]): ScheduledSlot | null {
-  const today = new Date().toISOString().split('T')[0]
-  const future = appointments
-    .filter((a) => a.clientId === clientId && a.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-  return future.length > 0 ? future[0] : null
-}
-
-function formatAppointmentDate(date: string, time: string): string {
-  const d = new Date(date)
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  const dateStr = d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
-  const dayName = d.toLocaleDateString('en-CA', { weekday: 'short' })
-
-  if (date === today.toISOString().split('T')[0]) return `Today at ${time}`
-  if (date === tomorrow.toISOString().split('T')[0]) return `Tomorrow at ${time}`
-  return `${dayName}, ${dateStr} at ${time}`
-}
-
 function expenseDisplay(client: Client): string {
   const dollars = formatCurrency(getExpensePerVisit(client))
   return client.expenseType === 'percent' ? `${dollars} (${client.expensePerClient}%)` : dollars
 }
 
-export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, onCompleteJob, onInvoice }: ClientListProps) {
+export function ClientList({ clients, viewMode, onRemove, onEdit, onCompleteJob, onInvoice }: ClientListProps) {
   if (clients.length === 0) {
     return (
       <GlowCard>
@@ -75,7 +52,6 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
     <section className="grid grid-cols-1 gap-4">
       <AnimatePresence>
         {clients.map((client) => {
-          const nextAppointment = getNextAppointment(client.id, appointments)
           const isOneTime = client.serviceFrequency === 'one_time'
           return (
             <motion.div
@@ -125,16 +101,6 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
                       </button>
                     </div>
                   </div>
-
-                  {nextAppointment && (
-                    <div
-                      className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
-                      style={{ backgroundColor: `rgba(var(--color-primary-light), 0.5)`, color: `rgb(var(--color-primary-dark))` }}
-                    >
-                      <Calendar className="h-4 w-4" />
-                      <span>{formatAppointmentDate(nextAppointment.date, nextAppointment.time)}</span>
-                    </div>
-                  )}
 
                   <div className="mt-4 grid gap-2 text-sm text-slate-700">
                     {client.phone ? (
@@ -208,7 +174,6 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
               <tr>
                 <Th>Name</Th>
                 <Th>Phone</Th>
-                <th className="px-4 py-3 font-medium">Next visit</th>
                 <Th>Frequency</Th>
                 <th className="px-4 py-3 font-medium">Per visit</th>
                 <th className="px-4 py-3 font-medium">Expense</th>
@@ -220,7 +185,6 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
             <tbody>
               <AnimatePresence initial={false}>
                 {clients.map((client) => {
-                  const nextAppointment = getNextAppointment(client.id, appointments)
                   return (
                     <motion.tr
                       key={client.id}
@@ -234,16 +198,6 @@ export function ClientList({ clients, appointments, viewMode, onRemove, onEdit, 
                         <p className="text-xs text-slate-500">{client.email || '—'}</p>
                       </Td>
                       <Td>{client.phone || '—'}</Td>
-                      <td className="px-4 py-3 align-top text-slate-700">
-                        {nextAppointment ? (
-                          <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: `rgb(var(--color-primary-dark))` }}>
-                            <Calendar className="h-3.5 w-3.5" />
-                            {formatAppointmentDate(nextAppointment.date, nextAppointment.time)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">Not scheduled</span>
-                        )}
-                      </td>
                       <Td>{serviceFrequencyLabels[client.serviceFrequency]}</Td>
                       <td className="px-4 py-3 align-top text-slate-700 tabular">{formatCurrency(client.perCutRate)}</td>
                       <td className="px-4 py-3 align-top text-slate-700 tabular">{expenseDisplay(client)}</td>

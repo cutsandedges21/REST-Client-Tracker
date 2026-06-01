@@ -83,7 +83,7 @@ interface ClientState {
   /** Mark a logged job paid/unpaid (with optional method). */
   setJobPaid: (id: string, paid: boolean, method?: PaymentMethod) => Promise<void>
 
-  addRouteStop: (input: { clientId: string; date: string }) => Promise<{ ok: true } | { ok: false; reason: string }>
+  addRouteStop: (input: { clientId: string; date: string; time?: string }) => Promise<{ ok: true } | { ok: false; reason: string }>
   removeRouteStop: (id: string) => Promise<void>
   reorderRouteStops: (date: string, orderedIds: string[]) => Promise<void>
   /** Log a stop as done: creates a completed job and links it to the stop. */
@@ -390,16 +390,22 @@ export const useClientStore = create<ClientState>((set, get) => {
       await get().updateCompletedJob(id, { paid, paymentMethod: paid ? method : undefined })
     },
 
-    addRouteStop: async ({ clientId, date }) => {
+    addRouteStop: async ({ clientId, date, time }) => {
       const { userId, username } = get()
       if (!userId || !username) return { ok: false, reason: 'Not signed in.' }
       const sameDay = get().routeStops.filter((s) => s.date === date)
       if (sameDay.some((s) => s.clientId === clientId)) {
         return { ok: false, reason: 'That client is already on this route.' }
       }
-      const nextOrder = sameDay.reduce((max, s) => Math.max(max, s.sortOrder), -1) + 1
+      let sortOrder: number
+      if (time) {
+        const [h, m] = time.split(':').map(Number)
+        sortOrder = (h ?? 0) * 60 + (m ?? 0)
+      } else {
+        sortOrder = sameDay.reduce((max, s) => Math.max(max, s.sortOrder), -1) + 1
+      }
       try {
-        const stop = await insertRouteStop(userId, username, { clientId, date, sortOrder: nextOrder })
+        const stop = await insertRouteStop(userId, username, { clientId, date, sortOrder })
         set((state) => ({ routeStops: [...state.routeStops, stop] }))
         persist()
         return { ok: true }

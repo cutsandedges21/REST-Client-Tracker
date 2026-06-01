@@ -1,12 +1,13 @@
-import { CalendarDays, Home, Menu, Route, Users } from 'lucide-react'
+import { Home, Menu, Receipt, Route, UserPlus, Users } from 'lucide-react'
 
-export type AppTab = 'home' | 'clients' | 'route' | 'schedule' | 'more'
+export type AppTab = 'home' | 'add' | 'clients' | 'route' | 'expenses' | 'more'
 
 const ITEMS: { tab: AppTab; label: string; Icon: typeof Home }[] = [
   { tab: 'home', label: 'Home', Icon: Home },
+  { tab: 'add', label: 'Add', Icon: UserPlus },
   { tab: 'clients', label: 'Clients', Icon: Users },
   { tab: 'route', label: 'Route', Icon: Route },
-  { tab: 'schedule', label: 'Schedule', Icon: CalendarDays },
+  { tab: 'expenses', label: 'Expenses', Icon: Receipt },
   { tab: 'more', label: 'More', Icon: Menu },
 ]
 
@@ -53,12 +54,12 @@ export function AppNav({ active, onChange, variant }: AppNavProps) {
               key={tab}
               type="button"
               onClick={() => onChange(tab)}
-              className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition"
+              className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition"
               style={{ color: isActive ? 'rgb(var(--color-primary))' : '#94a3b8' }}
               aria-current={isActive ? 'page' : undefined}
             >
               <span
-                className="grid h-9 w-12 place-items-center rounded-xl transition"
+                className="grid h-8 w-10 place-items-center rounded-xl transition"
                 style={isActive ? { backgroundColor: 'rgba(var(--color-primary-light), 0.9)' } : undefined}
               >
                 <Icon className="h-5 w-5" />

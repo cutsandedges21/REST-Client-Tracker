@@ -11,7 +11,6 @@ import { DeleteConfirmDialog } from './components/DeleteConfirmDialog'
 import { EarningsChart } from './components/EarningsChart'
 import { ExpensesCard } from './components/ExpensesCard'
 import { GlowCard } from './components/GlowCard'
-import { ScheduleCalendar } from './components/ScheduleCalendar'
 import { AllTimeStats } from './components/AllTimeStats'
 import { ProfitChart } from './components/ProfitChart'
 import { CompleteJobDialog, type CompleteJobInput } from './components/CompleteJobDialog'
@@ -26,7 +25,6 @@ import { GuidePage } from './pages/GuidePage'
 import { InvoiceTemplatePage } from './pages/InvoiceTemplatePage'
 import { AccountPage } from './pages/AccountPage'
 import { UpgradePage } from './pages/UpgradePage'
-import { reminderScheduler, ReminderScheduler } from './services/reminderScheduler'
 import { getDashboardMetrics } from './lib/finance'
 import { startCheckout } from './lib/billing'
 import { useTheme } from './contexts/ThemeContext'
@@ -54,7 +52,6 @@ export function AuthedApp() {
 
   const {
     clients,
-    appointments,
     completedJobs,
     expenses,
     routeStops,
@@ -68,9 +65,6 @@ export function AuthedApp() {
     updateClient,
     removeClient,
     restoreClient,
-    addAppointment,
-    updateAppointment,
-    removeAppointment,
     setSearchTerm,
     setViewMode,
     addCompletedJob,
@@ -98,21 +92,6 @@ export function AuthedApp() {
       setAuthBundle({ userId: user.id, username: profile.username, plan: profile.plan })
     }
   }, [user, profile, setAuthBundle])
-
-  // Start the reminder scheduler once data is ready; refresh its data on change.
-  useEffect(() => {
-    if (!isLoaded) return
-    void ReminderScheduler.requestPermission()
-    reminderScheduler.start(appointments, clients, (client, appt) => {
-      toast(`Upcoming: ${client.fullName}`, { description: `at ${appt.time}${client.address ? ` · ${client.address}` : ''}` })
-    })
-    return () => reminderScheduler.stop()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded])
-
-  useEffect(() => {
-    if (isLoaded) reminderScheduler.updateData(appointments, clients)
-  }, [appointments, clients, isLoaded])
 
   // Handle return from Stripe Checkout. The plan is written by the Stripe
   // webhook a beat *after* the redirect, so a single refresh can read the old
@@ -179,7 +158,7 @@ export function AuthedApp() {
     {
       selector: null,
       title: 'Welcome to REST 👋',
-      body: 'A quick 5-step tour of how everything works — about 30 seconds. You can skip anytime.',
+      body: 'A quick 4-step tour of how everything works — about 20 seconds. You can skip anytime.',
     },
     {
       selector: 'home-stats',
@@ -190,19 +169,13 @@ export function AuthedApp() {
     {
       selector: 'clients-add',
       title: 'Add your clients',
-      body: 'Add each customer with their rate, frequency and expenses, then invoice or log a finished job from their card.',
-      onEnter: () => setTab('clients'),
-    },
-    {
-      selector: 'schedule',
-      title: 'Schedule visits',
-      body: 'Book appointments on the calendar and get a reminder about 30 minutes before each one.',
-      onEnter: () => setTab('schedule'),
+      body: 'Add each customer with their rate, frequency and expenses. Check "Schedule first visit" to send them straight to your Route.',
+      onEnter: () => setTab('add'),
     },
     {
       selector: 'guide-link',
       title: 'Help is always here',
-      body: 'Whenever you’re unsure, open “How to use REST” for a full walkthrough of every feature.',
+      body: "Whenever you're unsure, open \"How to use REST\" for a full walkthrough of every feature.",
       onEnter: () => setTab('more'),
       cta: 'Open the guide',
       onCta: () => setView('guide'),
@@ -265,7 +238,7 @@ export function AuthedApp() {
   const handleUpgrade = async (planId: PlanId) => {
     if (planId === plan) return
     if (planId === 'free') {
-      toast.info('To cancel a paid plan, use the “Manage billing” link in your Stripe receipt email.')
+      toast.info('To cancel a paid plan, use the "Manage billing" link in your Stripe receipt email.')
       return
     }
     try {
@@ -337,6 +310,20 @@ export function AuthedApp() {
                 </>
               )}
 
+              {tab === 'add' && (
+                <div data-tour="clients-add">
+                  <ClientForm
+                    onSubmit={addClient}
+                    onSchedule={async (clientId, date, time) => {
+                      const result = await addRouteStop({ clientId, date, time })
+                      if (!result.ok) toast.error((result as { ok: false; reason: string }).reason)
+                    }}
+                    atLimit={atClientLimit}
+                    onUpgradeRequired={() => setView('upgrade')}
+                  />
+                </div>
+              )}
+
               {tab === 'clients' && (
                 <>
                   <SearchHero
@@ -366,7 +353,6 @@ export function AuthedApp() {
 
                   <ClientList
                     clients={filteredClients}
-                    appointments={appointments}
                     viewMode={viewMode}
                     onRemove={setPendingDelete}
                     onEdit={setEditingClient}
@@ -384,7 +370,6 @@ export function AuthedApp() {
                       </div>
                       <ClientList
                         clients={filteredOneTime}
-                        appointments={appointments}
                         viewMode="cards"
                         onRemove={setPendingDelete}
                         onEdit={setEditingClient}
@@ -393,20 +378,6 @@ export function AuthedApp() {
                       />
                     </div>
                   )}
-
-                  <div data-tour="clients-add">
-                    <ClientForm
-                      onSubmit={addClient}
-                      onSchedule={async (clientId, date, time) => {
-                        const result = await addAppointment({ clientId, date, time })
-                        if (!result.ok) toast.error((result as { ok: false; reason: string }).reason)
-                      }}
-                      atLimit={atClientLimit}
-                      onUpgradeRequired={() => setView('upgrade')}
-                    />
-                  </div>
-
-                  <ExpensesCard />
                 </>
               )}
 
@@ -424,16 +395,8 @@ export function AuthedApp() {
                 />
               )}
 
-              {tab === 'schedule' && (
-                <div data-tour="schedule">
-                  <ScheduleCalendar
-                    clients={clients}
-                    appointments={appointments}
-                    onAdd={(input) => addAppointment(input)}
-                    onUpdate={(id, input) => updateAppointment(id, input)}
-                    onRemove={(id) => void removeAppointment(id)}
-                  />
-                </div>
+              {tab === 'expenses' && (
+                <ExpensesCard />
               )}
 
               {tab === 'more' && (
@@ -663,7 +626,7 @@ function SearchHero({
               exit={{ opacity: 0 }}
               className="mt-3 text-xs text-slate-500 sm:text-sm"
             >
-              Add your first client below to start tracking.
+              Add your first client on the Add tab to start tracking.
             </motion.p>
           )}
         </AnimatePresence>

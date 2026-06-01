@@ -242,7 +242,7 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
                   className="h-4 w-4 rounded border-slate-300"
                   style={{ accentColor: 'rgb(var(--color-primary))' }}
                 />
-                <span className={labelClass}>Schedule first appointment</span>
+                <span className={labelClass}>Schedule first visit</span>
               </label>
 
               {scheduleClient && (

@@ -37,7 +37,9 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
   const { colorTheme } = useTheme()
   const business = profile?.business_name?.trim() || profile?.account_name?.trim() || 'My Lawn Care'
   const template = profile?.invoice_template?.trim() || DEFAULT_INVOICE_TEMPLATE
-  const accentDark = rgbStringToHex(colorThemes[colorTheme].rgb.primaryDark)
+  const accentDark =
+    profile?.invoice_accent_color ??
+    rgbStringToHex(colorThemes[colorTheme].rgb.primaryDark)
 
   const [to, setTo] = useState('')
   const [amount, setAmount] = useState('')

@@ -1,6 +1,12 @@
 export const DEFAULT_INVOICE_TEMPLATE = `Hi {{client}},
 
-Thanks for your business! Your invoice details are below. Payment can be made by cash, e-transfer, or cheque — just reply to this email with any questions.
+Thanks for your business! Here is your invoice from {{business}}.
+
+Service: {{service}}
+Date: {{date}}
+Amount due: {{amount}}
+
+Payment can be made by cash, e-transfer, or cheque. Reply to this email with any questions.
 
 Thank you,
 {{business}}`
