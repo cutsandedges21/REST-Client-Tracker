@@ -29,6 +29,7 @@ alter table public.profiles add column if not exists account_name text;
 alter table public.profiles add column if not exists invoice_template text;
 alter table public.profiles add column if not exists business_name text;
 alter table public.profiles add column if not exists stripe_customer_id text;
+alter table public.profiles add column if not exists invoice_accent_color text;
 
 alter table public.profiles enable row level security;
 

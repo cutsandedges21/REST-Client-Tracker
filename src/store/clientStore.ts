@@ -225,7 +225,17 @@ export const useClientStore = create<ClientState>((set, get) => {
     },
 
     saveAndClear: () => {
-      persist()
+      // Delete the cache on logout so client PII doesn't sit in localStorage
+      // on shared/public devices. The cache was already kept current during the
+      // session via persist() after every mutation, so nothing is lost.
+      const { username } = get()
+      if (username) {
+        try {
+          localStorage.removeItem(cacheKey(username))
+        } catch {
+          // ignore — storage unavailable
+        }
+      }
       set({
         userId: null,
         username: null,

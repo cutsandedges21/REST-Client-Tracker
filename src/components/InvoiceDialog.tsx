@@ -34,7 +34,7 @@ const longDate = (d: string) =>
 export function InvoiceDialog({ open, client, onClose, onEditTemplate }: InvoiceDialogProps) {
   const { profile, user } = useAuth()
   const { colorTheme } = useTheme()
-  const business = profile?.business_name?.trim() || profile?.account_name?.trim() || 'Mossimo Bianco'
+  const business = profile?.business_name?.trim() || profile?.account_name?.trim() || 'Your Business'
   const template = profile?.invoice_template?.trim() || DEFAULT_INVOICE_TEMPLATE
   const accentDark =
     profile?.invoice_accent_color ??
@@ -94,7 +94,7 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
   const subject = `Invoice from ${business}`
 
   const send = async () => {
-    if (!to.trim() || !to.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) {
       toast.error('Enter a valid recipient email address')
       return
     }
@@ -111,7 +111,7 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
   }
 
   const openInEmailApp = () => {
-    if (!to.trim() || !to.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) {
       toast.error('Enter a valid recipient email address')
       return
     }
