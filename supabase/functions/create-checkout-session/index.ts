@@ -18,20 +18,31 @@ const PRICES: Record<string, string | undefined> = {
   enterprise: Deno.env.get('STRIPE_PRICE_ENTERPRISE'),
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Restrict CORS to the configured app origin. Falls back to '*' only when
+// APP_URL is not set (local dev), since JWT auth is the real gate anyway.
+const APP_URL = Deno.env.get('APP_URL') ?? ''
+const ALLOWED_ORIGINS = new Set(
+  [APP_URL, 'http://localhost:5173', 'http://localhost:4173'].filter(Boolean),
+)
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? ''
+  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : (APP_URL || '*')
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
 }
 
-function json(obj: unknown, status = 200) {
+function json(req: Request, obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   })
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -45,11 +56,11 @@ Deno.serve(async (req) => {
     const {
       data: { user },
     } = await userClient.auth.getUser()
-    if (!user) return json({ error: 'Unauthorized' }, 401)
+    if (!user) return json(req, { error: 'Unauthorized' }, 401)
 
     const { plan } = (await req.json()) as { plan?: string }
     const price = plan ? PRICES[plan] : undefined
-    if (!price) return json({ error: 'Invalid or unconfigured plan' }, 400)
+    if (!price) return json(req, { error: 'Invalid or unconfigured plan' }, 400)
 
     const admin = createClient(supabaseUrl, serviceKey)
     const { data: profile } = await admin
@@ -67,21 +78,24 @@ Deno.serve(async (req) => {
       await admin.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
     }
 
-    const origin = req.headers.get('origin') ?? Deno.env.get('APP_URL') ?? ''
+    // Use the server-configured APP_URL for redirects — never trust the
+    // request Origin header for this, as it could be spoofed to redirect
+    // users to an attacker-controlled page after payment.
+    const appUrl = APP_URL || req.headers.get('origin') || ''
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price, quantity: 1 }],
-      success_url: `${origin}/app?checkout=success`,
-      cancel_url: `${origin}/app?checkout=cancel`,
+      success_url: `${appUrl}/app?checkout=success`,
+      cancel_url: `${appUrl}/app?checkout=cancel`,
       client_reference_id: user.id,
       metadata: { user_id: user.id, plan: plan! },
       subscription_data: { metadata: { user_id: user.id, plan: plan! } },
     })
 
-    return json({ url: session.url })
+    return json(req, { url: session.url })
   } catch (error) {
     console.error('[create-checkout-session]', error)
-    return json({ error: error instanceof Error ? error.message : 'Server error' }, 500)
+    return json(req, { error: error instanceof Error ? error.message : 'Server error' }, 500)
   }
 })

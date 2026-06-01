@@ -4,7 +4,6 @@ import type {
   ClientRow,
   CompletedJobRow,
   ExpenseRow,
-  PlanTier,
   ProfileRow,
   RouteStopRow,
 } from '../types/database'
@@ -123,14 +122,6 @@ export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
     return null
   }
   return data as ProfileRow | null
-}
-
-export async function updateProfilePlan(userId: string, plan: PlanTier): Promise<void> {
-  const { error } = await supabase.from('profiles').update({ plan }).eq('id', userId)
-  if (error) {
-    console.error('[api] updateProfilePlan failed:', error)
-    throw error
-  }
 }
 
 export async function updateProfileAccountName(

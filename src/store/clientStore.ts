@@ -3,7 +3,7 @@ import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
 import type { Expense, ExpenseFormInput } from '../types/expense'
 import type { PaymentMethod, RouteStop } from '../types/route'
-import { isSpecialUser, type PlanId } from '../lib/plans'
+import type { PlanId } from '../lib/plans'
 import {
   deleteAppointment,
   deleteClient,
@@ -27,7 +27,6 @@ import {
   updateAppointmentRow,
   updateClientRow,
   updateCompletedJobRow,
-  updateProfilePlan,
 } from '../lib/api'
 
 type ViewMode = 'cards' | 'table'
@@ -60,7 +59,6 @@ interface ClientState {
   viewMode: ViewMode
 
   setAuthBundle: (bundle: AuthBundle | null) => void
-  setPlan: (plan: PlanId) => Promise<void>
   refresh: () => Promise<void>
   /** Explicit "save on logout": persist a local snapshot, then clear state. */
   saveAndClear: () => void
@@ -176,16 +174,13 @@ export const useClientStore = create<ClientState>((set, get) => {
         })
         return
       }
-      // Special users always have full access — force enterprise regardless of stored plan.
-      const effectivePlan = isSpecialUser(bundle.username) ? 'enterprise' : bundle.plan
-
       // Load-on-login: hydrate instantly from the last local snapshot (if any),
       // so the UI shows data immediately while the network refresh runs.
       const cached = readSnapshot(bundle.username)
       set({
         userId: bundle.userId,
         username: bundle.username,
-        plan: effectivePlan,
+        plan: bundle.plan,
         clients: cached?.clients ?? [],
         appointments: cached?.appointments ?? [],
         completedJobs: cached?.completedJobs ?? [],
@@ -194,17 +189,6 @@ export const useClientStore = create<ClientState>((set, get) => {
         isLoaded: cached !== null,
       })
       void get().refresh()
-    },
-
-    setPlan: async (plan) => {
-      const { userId } = get()
-      if (!userId) return
-      set({ plan })
-      try {
-        await updateProfilePlan(userId, plan)
-      } catch (error) {
-        console.error('[store] failed to update plan:', error)
-      }
     },
 
     refresh: async () => {
@@ -262,7 +246,7 @@ export const useClientStore = create<ClientState>((set, get) => {
 
       // One-time clients don't count toward the free-plan limit and are never blocked.
       const recurringCount = clients.filter((c) => c.serviceFrequency !== 'one_time').length
-      if (!isSpecialUser(username) && plan === 'free' && data.serviceFrequency !== 'one_time' && recurringCount >= 3) {
+      if (plan === 'free' && data.serviceFrequency !== 'one_time' && recurringCount >= 3) {
         throw new Error('Client limit reached. Upgrade to Pro for unlimited clients.')
       }
 

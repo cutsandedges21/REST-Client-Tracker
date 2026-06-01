@@ -57,10 +57,3 @@ export const PLANS: Plan[] = [
 export function getPlan(id: PlanId): Plan {
   return PLANS.find((plan) => plan.id === id) ?? PLANS[0]
 }
-
-// Users granted full (enterprise/MAX tier) access with unlimited clients.
-export const SPECIAL_USERS = ['mb08', 'jt08', 'user_d95b177a']
-
-export function isSpecialUser(username: string | null): boolean {
-  return username !== null && SPECIAL_USERS.includes(username)
-}

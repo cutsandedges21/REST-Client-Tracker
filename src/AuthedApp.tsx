@@ -29,7 +29,7 @@ import { getDashboardMetrics } from './lib/finance'
 import { startCheckout } from './lib/billing'
 import { useTheme } from './contexts/ThemeContext'
 import { useAuth } from './contexts/AuthContext'
-import { getPlan, isSpecialUser, type PlanId } from './lib/plans'
+import { getPlan, type PlanId } from './lib/plans'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
@@ -84,7 +84,7 @@ export function AuthedApp() {
 
   const currentPlan = getPlan(plan)
   const atClientLimit =
-    currentPlan.clientLimit !== null && !isSpecialUser(username) && recurringClients.length >= currentPlan.clientLimit
+    currentPlan.clientLimit !== null && recurringClients.length >= currentPlan.clientLimit
 
   // Sync auth context -> store. Triggers initial data fetch (load-on-login).
   useEffect(() => {
@@ -250,10 +250,26 @@ export function AuthedApp() {
 
   const accountLabel = profile?.account_name?.trim() || (username ? `@${username}` : '')
 
+  // The tab nav stays visible on every screen; tapping a tab from a settings
+  // sub-page returns to the main dashboard on that tab.
+  const goToTab = (t: AppTab) => {
+    setView('main')
+    setTab(t)
+  }
+
   return (
     <main className="relative min-h-screen px-3 pb-28 pt-5 text-slate-900 transition-colors sm:px-4 md:px-8 md:pb-12">
       <AnimatedBackground />
       <Toaster richColors position="top-center" />
+
+      {/* Desktop nav stays visible on settings sub-pages too (main view has its own header). */}
+      {isLoaded && view !== 'main' && (
+        <div className="mx-auto mb-5 hidden w-full max-w-3xl items-center justify-between gap-3 md:flex">
+          <RestMark size="sm" />
+          <AppNav variant="top" active={tab} onChange={goToTab} />
+          <PlanChip planName={currentPlan.name} accountLabel={accountLabel} />
+        </div>
+      )}
 
       {!isLoaded ? (
         <div className="flex min-h-screen items-center justify-center">
@@ -286,7 +302,7 @@ export function AuthedApp() {
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 sm:gap-6">
           <header className="flex items-center justify-between gap-3 pt-1">
             <RestMark size="sm" />
-            <AppNav variant="top" active={tab} onChange={setTab} />
+            <AppNav variant="top" active={tab} onChange={goToTab} />
             <PlanChip planName={currentPlan.name} accountLabel={accountLabel} />
           </header>
 
@@ -412,7 +428,7 @@ export function AuthedApp() {
         </div>
       )}
 
-      {view === 'main' && <AppNav variant="bottom" active={tab} onChange={setTab} />}
+      {isLoaded && <AppNav variant="bottom" active={tab} onChange={goToTab} />}
 
       {showTour && view === 'main' && <OnboardingTour steps={tourSteps} onFinish={finishTour} />}
 

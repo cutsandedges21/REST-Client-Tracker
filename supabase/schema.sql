@@ -365,3 +365,86 @@ as $$
 $$;
 
 grant execute on function public.username_available(text) to anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- SECURITY: prevent authenticated users from self-elevating their plan
+-- or modifying stripe_customer_id via the client-side Supabase API.
+-- The plan and stripe_customer_id columns must only be written by the
+-- service_role (Stripe webhook edge function). Direct DB access (psql,
+-- migrations) and service_role connections are exempt.
+-- ----------------------------------------------------------------------------
+create or replace function public.prevent_plan_self_modification()
+returns trigger
+language plpgsql
+as $$
+begin
+  -- Only block requests that arrive through PostgREST with an authenticated
+  -- user JWT. Service-role requests, direct DB connections, and migrations
+  -- have request.jwt.claim.role as null/empty and are allowed through.
+  if current_setting('request.jwt.claim.role', true) = 'authenticated' then
+    if new.plan is distinct from old.plan then
+      raise exception 'Permission denied: plan can only be changed by the system';
+    end if;
+    if new.stripe_customer_id is distinct from old.stripe_customer_id then
+      raise exception 'Permission denied: billing fields can only be changed by the system';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_protect_plan on public.profiles;
+create trigger profiles_protect_plan
+  before update on public.profiles
+  for each row execute function public.prevent_plan_self_modification();
+
+-- ----------------------------------------------------------------------------
+-- SECURITY: enforce free-plan client limit server-side (belt-and-suspenders
+-- alongside the client-side check in the store).
+-- Free plan: max 3 recurring clients. one_time clients are always allowed.
+-- ----------------------------------------------------------------------------
+create or replace function public.enforce_client_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plan text;
+  v_count int;
+begin
+  -- one_time clients are never limited
+  if new.service_frequency = 'one_time' then
+    return new;
+  end if;
+
+  select plan into v_plan from public.profiles where id = new.user_id;
+
+  if v_plan = 'free' then
+    select count(*) into v_count
+    from public.clients
+    where user_id = new.user_id
+      and service_frequency != 'one_time';
+    if v_count >= 3 then
+      raise exception 'Client limit reached for free plan. Upgrade to Pro for unlimited clients.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists clients_enforce_plan_limit on public.clients;
+create trigger clients_enforce_plan_limit
+  before insert on public.clients
+  for each row execute function public.enforce_client_limit();
+
+-- ----------------------------------------------------------------------------
+-- MIGRATION: set previously hard-coded "special" admin accounts to enterprise
+-- so that removing the client-side override does not downgrade them.
+-- Safe to re-run (update is idempotent).
+-- ----------------------------------------------------------------------------
+update public.profiles
+set plan = 'enterprise'
+where username in ('mb08', 'jt08', 'user_d95b177a')
+  and plan != 'enterprise';

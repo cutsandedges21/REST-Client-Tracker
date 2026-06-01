@@ -11,20 +11,29 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const APP_URL = Deno.env.get('APP_URL') ?? ''
+const ALLOWED_ORIGINS = new Set(
+  [APP_URL, 'http://localhost:5173', 'http://localhost:4173'].filter(Boolean),
+)
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? ''
+  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : (APP_URL || '*')
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
 }
 
-function json(obj: unknown, status = 200) {
+function json(req: Request, obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   })
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
 
   try {
     // Verify the caller is signed in.
@@ -37,7 +46,7 @@ Deno.serve(async (req) => {
     const {
       data: { user },
     } = await userClient.auth.getUser()
-    if (!user) return json({ error: 'Unauthorized' }, 401)
+    if (!user) return json(req, { error: 'Unauthorized' }, 401)
 
     const { to, subject, html, replyTo } = (await req.json()) as {
       to?: string
@@ -45,12 +54,20 @@ Deno.serve(async (req) => {
       html?: string
       replyTo?: string
     }
-    if (!to || !html) return json({ error: 'Missing recipient or content' }, 400)
+    if (!to || !html) return json(req, { error: 'Missing recipient or content' }, 400)
+
+    // Validate email format to prevent sending to arbitrary addresses
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(to)) return json(req, { error: 'Invalid recipient email address' }, 400)
+
+    // Enforce reasonable size limits
+    if (html.length > 100_000) return json(req, { error: 'Invoice content too large' }, 400)
+    if (subject && subject.length > 200) return json(req, { error: 'Subject line too long' }, 400)
 
     const apiKey = Deno.env.get('RESEND_API_KEY')
     const from = Deno.env.get('INVOICE_FROM')
     if (!apiKey || !from) {
-      return json({ error: 'Email sending is not set up yet (RESEND_API_KEY / INVOICE_FROM).' }, 503)
+      return json(req, { error: 'Email sending is not set up yet (RESEND_API_KEY / INVOICE_FROM).' }, 503)
     }
 
     const res = await fetch('https://api.resend.com/emails', {
@@ -66,11 +83,11 @@ Deno.serve(async (req) => {
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      return json({ error: (data as { message?: string })?.message || 'Resend rejected the email' }, 502)
+      return json(req, { error: (data as { message?: string })?.message || 'Resend rejected the email' }, 502)
     }
-    return json({ ok: true, id: (data as { id?: string })?.id })
+    return json(req, { ok: true, id: (data as { id?: string })?.id })
   } catch (error) {
     console.error('[send-invoice]', error)
-    return json({ error: error instanceof Error ? error.message : 'Server error' }, 500)
+    return json(req, { error: error instanceof Error ? error.message : 'Server error' }, 500)
   }
 })
