@@ -2,7 +2,6 @@ export const DEFAULT_INVOICE_TEMPLATE = `Hi {{client}},
 
 Thanks for your business! Here is your invoice from {{business}}.
 
-Service: {{service}}
 Date: {{date}}
 Amount due: {{amount}}
 
@@ -14,7 +13,6 @@ Thank you,
 export interface InvoiceVars {
   client: string
   business: string
-  service: string
   date: string
   amount: string
 }
@@ -24,11 +22,10 @@ export function fillTemplate(template: string, vars: InvoiceVars): string {
   const map: Record<string, string> = {
     client: vars.client,
     business: vars.business,
-    service: vars.service,
     date: vars.date,
     amount: vars.amount,
   }
-  return template.replace(/\{\{\s*(client|business|service|date|amount)\s*\}\}/gi, (_, key: string) =>
+  return template.replace(/\{\{\s*(client|business|date|amount)\s*\}\}/gi, (_, key: string) =>
     map[key.toLowerCase()] ?? '',
   )
 }
@@ -39,7 +36,7 @@ export function buildMailto(to: string, subject: string, body: string): string {
   return `mailto:${to}?${query}`
 }
 
-export const INVOICE_PLACEHOLDERS = ['{{client}}', '{{business}}', '{{service}}', '{{date}}', '{{amount}}']
+export const INVOICE_PLACEHOLDERS = ['{{client}}', '{{business}}', '{{date}}', '{{amount}}']
 
 // ---------------- Styled HTML invoice (for Resend) ----------------
 
@@ -63,7 +60,6 @@ export interface InvoiceEmailData {
   clientName: string
   /** Pre-formatted, e.g. "$50.00" */
   amount: string
-  service: string
   /** Pre-formatted, e.g. "May 31, 2026" */
   date: string
   /** Optional message/blurb (may contain newlines). */
@@ -104,10 +100,6 @@ export function renderInvoiceHtml(d: InvoiceEmailData): string {
           <p style="margin:0 0 18px;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(d.clientName)},</p>
           ${messageHtml}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:6px;">
-            <tr>
-              <td style="padding:12px 0;font-size:14px;color:#6b7280;border-bottom:1px solid #eef0f2;">Service</td>
-              <td align="right" style="padding:12px 0;font-size:14px;font-weight:600;color:#1a1a1a;border-bottom:1px solid #eef0f2;">${escapeHtml(d.service)}</td>
-            </tr>
             <tr>
               <td style="padding:12px 0;font-size:14px;color:#6b7280;border-bottom:1px solid #eef0f2;">Date</td>
               <td align="right" style="padding:12px 0;font-size:14px;font-weight:600;color:#1a1a1a;border-bottom:1px solid #eef0f2;">${escapeHtml(d.date)}</td>

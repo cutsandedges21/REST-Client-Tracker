@@ -4,7 +4,6 @@ import { Mail, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Client } from '../types/client'
 import { formatCurrency } from '../lib/finance'
-import { serviceFrequencyLabels } from '../lib/labels'
 import {
   DEFAULT_INVOICE_TEMPLATE,
   buildMailto,
@@ -43,7 +42,6 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
 
   const [to, setTo] = useState('')
   const [amount, setAmount] = useState('')
-  const [service, setService] = useState('')
   const [date, setDate] = useState(today())
   const [message, setMessage] = useState('')
   const [manual, setManual] = useState(false)
@@ -54,7 +52,6 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
     if (open && client) {
       setTo(client.email ?? '')
       setAmount(String(client.perCutRate ?? ''))
-      setService(`${serviceFrequencyLabels[client.serviceFrequency]} lawn service`)
       setDate(today())
       setManual(false)
     }
@@ -70,12 +67,11 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
       fillTemplate(template, {
         client: client.fullName,
         business,
-        service,
         date: longDate(date),
         amount: amountText,
       }),
     )
-  }, [open, client, manual, template, business, service, date, amountText])
+  }, [open, client, manual, template, business, date, amountText])
 
   const html = useMemo(
     () =>
@@ -84,14 +80,13 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
             businessName: business,
             clientName: client.fullName,
             amount: amountText,
-            service,
             date: longDate(date),
             message,
             accentDark,
             replyTo: user?.email ?? undefined,
           })
         : '',
-    [client, business, amountText, service, date, message, accentDark, user?.email],
+    [client, business, amountText, date, message, accentDark, user?.email],
   )
 
   if (!client) return null
@@ -196,18 +191,6 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
                         />
                       </label>
                     </div>
-
-                    <label className="space-y-1.5">
-                      <span className={labelClass}>Service</span>
-                      <input
-                        className={inputClass}
-                        value={service}
-                        onChange={(e) => {
-                          setService(e.target.value)
-                          setManual(false)
-                        }}
-                      />
-                    </label>
 
                     <label className="space-y-1.5">
                       <div className="flex items-center justify-between">

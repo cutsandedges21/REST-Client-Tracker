@@ -32,12 +32,10 @@ export function InvoiceTemplatePage({ onBack }: InvoiceTemplatePageProps) {
         businessName: businessName.trim() || 'My Business',
         clientName: 'Alex Johnson',
         amount: '$50.00',
-        service: 'Lawn service',
         date: today,
         message: fillTemplate(template, {
           client: 'Alex Johnson',
           business: businessName.trim() || 'My Business',
-          service: 'Lawn service',
           date: today,
           amount: '$50.00',
         }),
