@@ -14,6 +14,7 @@ interface Props {
 }
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,24}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MIN_PASSWORD_LENGTH = 8
 
 function describeAuthError(message: string): string {
@@ -23,11 +24,8 @@ function describeAuthError(message: string): string {
   if (message.toLowerCase().includes('not confirmed')) {
     return 'Almost there — the project owner needs to turn OFF “Confirm email” in Supabase (Authentication → Sign In / Providers → Email).'
   }
-  if (message.toLowerCase().includes('already registered')) {
-    return 'An account with that username already exists. Try signing in instead.'
-  }
-  if (message.toLowerCase().includes('email') && message.toLowerCase().includes('invalid')) {
-    return 'Sign-up was rejected by the server. Please try again, or contact support.'
+  if (message.toLowerCase().includes('already registered') || message.toLowerCase().includes('already been registered')) {
+    return 'An account with that email already exists. Try signing in instead.'
   }
   if (message.toLowerCase().includes('password')) {
     return message
@@ -42,6 +40,7 @@ export function LoginScreen({ mode = 'login' }: Props) {
 
   const [isRegistering, setIsRegistering] = useState(mode === 'signup')
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -87,6 +86,10 @@ export function LoginScreen({ mode = 'login' }: Props) {
         setError('Username must be 3–24 characters: letters, numbers, underscore.')
         return
       }
+      if (!EMAIL_REGEX.test(email.trim())) {
+        setError('Enter a valid email address.')
+        return
+      }
       if (password.length < MIN_PASSWORD_LENGTH) {
         setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`)
         return
@@ -111,18 +114,17 @@ export function LoginScreen({ mode = 'login' }: Props) {
           return
         }
 
-        const { error } = await signUpWithUsername(username.trim(), password)
+        const { error } = await signUpWithUsername(username.trim(), email.trim(), password)
         if (error) {
           setError(describeAuthError(error.message))
           return
         }
 
-        // Placeholder emails can't receive a confirmation link, so email
-        // confirmation must be OFF in Supabase. Sign in immediately; the redirect
-        // effect then sends the user into the app. If confirmation is still on,
-        // the sign-in fails and we explain the one-time setting to flip.
+        // Sign in immediately (email confirmation should be OFF). The redirect
+        // effect then sends the user into the app; if confirmation is still on,
+        // explain the one-time setting to flip.
         try {
-          await signInWithUsername(username.trim(), password)
+          await signInWithUsername(email.trim(), password)
         } catch (signInErr) {
           setError(describeAuthError(signInErr instanceof Error ? signInErr.message : 'not confirmed'))
         }
@@ -130,18 +132,16 @@ export function LoginScreen({ mode = 'login' }: Props) {
         setSubmitting(false)
       }
     } else {
-      if (!username.trim() || !password) {
+      if (!email.trim() || !password) {
         setError('Enter your username and password.')
         return
       }
       setSubmitting(true)
       try {
-        console.log('[LoginScreen] Attempting sign in for username:', username.trim())
-        await signInWithUsername(username.trim(), password)
+        await signInWithUsername(email.trim(), password)
         // onAuthStateChange will update session; the redirect effect above will fire.
       } catch (signInError) {
-        console.error('[LoginScreen] Sign in failed:', signInError)
-        setError(describeAuthError(signInError.message))
+        setError(describeAuthError(signInError instanceof Error ? signInError.message : 'Sign in failed'))
         return
       } finally {
         setSubmitting(false)
@@ -179,16 +179,32 @@ export function LoginScreen({ mode = 'login' }: Props) {
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                  <Field label="Username">
+                  {isRegistering && (
+                    <Field label="Username">
+                      <input
+                        type="text"
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        className={inputClasses}
+                        placeholder="Choose a username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                      />
+                    </Field>
+                  )}
+
+                  <Field label={isRegistering ? 'Email' : 'Username'}>
                     <input
-                      type="text"
-                      autoComplete="username"
+                      type={isRegistering ? 'email' : 'text'}
+                      inputMode={isRegistering ? 'email' : 'text'}
+                      autoComplete={isRegistering ? 'email' : 'username'}
                       autoCapitalize="none"
                       spellCheck={false}
                       className={inputClasses}
-                      placeholder="Choose a username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder={isRegistering ? 'you@email.com' : 'Your username'}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </Field>
 

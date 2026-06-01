@@ -1,10 +1,11 @@
-import { CalendarDays, Home, Menu, Users } from 'lucide-react'
+import { CalendarDays, Home, Menu, Route, Users } from 'lucide-react'
 
-export type AppTab = 'home' | 'clients' | 'schedule' | 'more'
+export type AppTab = 'home' | 'clients' | 'route' | 'schedule' | 'more'
 
 const ITEMS: { tab: AppTab; label: string; Icon: typeof Home }[] = [
   { tab: 'home', label: 'Home', Icon: Home },
   { tab: 'clients', label: 'Clients', Icon: Users },
+  { tab: 'route', label: 'Route', Icon: Route },
   { tab: 'schedule', label: 'Schedule', Icon: CalendarDays },
   { tab: 'more', label: 'More', Icon: Menu },
 ]

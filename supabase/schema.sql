@@ -5,7 +5,7 @@
 -- Safe to re-run (idempotent: create-if-not-exists, add-column-if-not-exists,
 -- create-or-replace functions, drop-then-create policies/triggers).
 --
--- Tables: profiles, clients, appointments, completed_jobs
+-- Tables: profiles, clients, appointments, completed_jobs, expenses, route_stops
 -- All tables RLS-enabled, scoped to auth.uid().
 -- profiles row is auto-created via trigger on auth.users insert.
 -- ============================================================================
@@ -165,8 +165,18 @@ create table if not exists public.completed_jobs (
   updated_at timestamptz not null default now()
 );
 
+-- Payment tracking added after initial release: a job can be completed but not
+-- yet paid (some clients pay upfront, some later). payment_method is optional.
+alter table public.completed_jobs add column if not exists paid boolean not null default false;
+alter table public.completed_jobs add column if not exists payment_method text;
+alter table public.completed_jobs drop constraint if exists completed_jobs_payment_method_check;
+alter table public.completed_jobs
+  add constraint completed_jobs_payment_method_check
+  check (payment_method is null or payment_method in ('cash','etransfer','card','other'));
+
 create index if not exists completed_jobs_user_idx on public.completed_jobs(user_id);
 create index if not exists completed_jobs_user_date_idx on public.completed_jobs(user_id, date);
+create index if not exists completed_jobs_user_unpaid_idx on public.completed_jobs(user_id) where paid = false;
 
 alter table public.completed_jobs enable row level security;
 
@@ -231,6 +241,52 @@ create policy "expenses_delete_own"
   using (user_id = auth.uid());
 
 -- ----------------------------------------------------------------------------
+-- route_stops (a planned day route: ordered client visits)
+-- A stop is "done" iff completed_job_id is set. Payment status lives on the
+-- linked completed_job (see completed_jobs.paid / payment_method).
+-- ----------------------------------------------------------------------------
+create table if not exists public.route_stops (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  client_id uuid not null references public.clients(id) on delete cascade,
+  date date not null,
+  sort_order integer not null default 0,
+  completed_job_id uuid references public.completed_jobs(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists route_stops_user_idx on public.route_stops(user_id);
+create index if not exists route_stops_user_date_idx on public.route_stops(user_id, date, sort_order);
+create index if not exists route_stops_client_idx on public.route_stops(client_id);
+-- One stop per client per day keeps the route a clean checklist.
+create unique index if not exists route_stops_user_date_client_uniq
+  on public.route_stops(user_id, date, client_id);
+
+alter table public.route_stops enable row level security;
+
+drop policy if exists "route_stops_select_own" on public.route_stops;
+create policy "route_stops_select_own"
+  on public.route_stops for select
+  using (user_id = auth.uid());
+
+drop policy if exists "route_stops_insert_own" on public.route_stops;
+create policy "route_stops_insert_own"
+  on public.route_stops for insert
+  with check (user_id = auth.uid());
+
+drop policy if exists "route_stops_update_own" on public.route_stops;
+create policy "route_stops_update_own"
+  on public.route_stops for update
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists "route_stops_delete_own" on public.route_stops;
+create policy "route_stops_delete_own"
+  on public.route_stops for delete
+  using (user_id = auth.uid());
+
+-- ----------------------------------------------------------------------------
 -- updated_at trigger
 -- ----------------------------------------------------------------------------
 create or replace function public.touch_updated_at()
@@ -256,6 +312,11 @@ create trigger completed_jobs_touch_updated_at
 drop trigger if exists expenses_touch_updated_at on public.expenses;
 create trigger expenses_touch_updated_at
   before update on public.expenses
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists route_stops_touch_updated_at on public.route_stops;
+create trigger route_stops_touch_updated_at
+  before update on public.route_stops
   for each row execute function public.touch_updated_at();
 
 -- ----------------------------------------------------------------------------

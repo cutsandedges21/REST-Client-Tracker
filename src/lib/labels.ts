@@ -1,4 +1,15 @@
 import type { ServiceFrequency } from '../types/client'
+import type { PaymentMethod } from '../types/route'
+
+export const paymentMethodLabels: Record<PaymentMethod, string> = {
+  cash: 'Cash',
+  etransfer: 'E-transfer',
+  card: 'Card',
+  other: 'Other',
+}
+
+/** Ordered list of methods for selects/toggles. */
+export const paymentMethodOptions: PaymentMethod[] = ['cash', 'etransfer', 'card', 'other']
 
 export const serviceFrequencyLabels: Record<ServiceFrequency, string> = {
   one_time: 'One-time',

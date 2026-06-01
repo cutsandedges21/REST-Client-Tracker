@@ -50,6 +50,8 @@ export interface AppointmentRow {
   created_at: string
 }
 
+export type PaymentMethodDb = 'cash' | 'etransfer' | 'card' | 'other'
+
 export interface CompletedJobRow {
   id: string
   user_id: string
@@ -59,7 +61,20 @@ export interface CompletedJobRow {
   earnings: number
   time_spent: number
   expenses: number
+  paid: boolean
+  payment_method: PaymentMethodDb | null
   notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RouteStopRow {
+  id: string
+  user_id: string
+  client_id: string
+  date: string
+  sort_order: number
+  completed_job_id: string | null
   created_at: string
   updated_at: string
 }
@@ -120,6 +135,16 @@ export type Database = {
           updated_at?: string
         }
         Update: Partial<Omit<ExpenseRow, 'id' | 'user_id'>>
+        Relationships: []
+      }
+      route_stops: {
+        Row: RouteStopRow
+        Insert: Omit<RouteStopRow, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Omit<RouteStopRow, 'id' | 'user_id'>>
         Relationships: []
       }
     }

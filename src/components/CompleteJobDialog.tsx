@@ -1,20 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GlowCard } from './GlowCard'
 import type { Client } from '../types/client'
+import type { PaymentMethod } from '../types/route'
+import { paymentMethodOptions, paymentMethodLabels } from '../lib/labels'
+
+export interface CompleteJobInput {
+  clientId: string
+  clientName: string
+  date: string
+  earnings: number
+  timeSpent: number
+  expenses: number
+  paid: boolean
+  paymentMethod?: PaymentMethod
+  notes?: string
+}
 
 interface CompleteJobDialogProps {
   open: boolean
   onClose: () => void
-  onSave: (job: {
-    clientId: string
-    clientName: string
-    date: string
-    earnings: number
-    timeSpent: number
-    expenses: number
-    notes?: string
-  }) => void
+  onSave: (job: CompleteJobInput) => void
   clients: Client[]
   preselectedClientId?: string
 }
@@ -31,25 +37,34 @@ export function CompleteJobDialog({
   const [earnings, setEarnings] = useState('')
   const [timeSpent, setTimeSpent] = useState('')
   const [expenses, setExpenses] = useState('')
+  const [paid, setPaid] = useState(true)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Re-seed the form each time the dialog opens so it reflects the (possibly
+  // newly preselected) client — auto-filling rate/time/expenses from them.
+  useEffect(() => {
+    if (!open) return
+    const initialId = preselectedClientId || clients[0]?.id || ''
+    const client = clients.find((c) => c.id === initialId)
+    setClientId(initialId)
+    setEarnings(client ? client.perCutRate.toString() : '')
+    setTimeSpent(client ? client.cutDurationMinutes.toString() : '')
+    setExpenses(client ? client.expensePerClient.toString() : '')
+    setDate(new Date().toISOString().split('T')[0])
+    setPaid(true)
+    setPaymentMethod('cash')
+    setNotes('')
+    setErrors({})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, preselectedClientId])
 
   // Auto-fill when client changes
   const handleClientChange = (newClientId: string) => {
     setClientId(newClientId)
     const client = clients.find((c) => c.id === newClientId)
     if (client) {
-      setEarnings(client.perCutRate.toString())
-      setTimeSpent(client.cutDurationMinutes.toString())
-      setExpenses(client.expensePerClient.toString())
-    }
-  }
-
-  // Auto-fill on mount if preselected
-  if (preselectedClientId && !clientId) {
-    const client = clients.find((c) => c.id === preselectedClientId)
-    if (client) {
-      setClientId(preselectedClientId)
       setEarnings(client.perCutRate.toString())
       setTimeSpent(client.cutDurationMinutes.toString())
       setExpenses(client.expensePerClient.toString())
@@ -112,6 +127,8 @@ export function CompleteJobDialog({
       earnings: parseFloat(earnings),
       timeSpent: parseFloat(timeSpent),
       expenses: parseFloat(expenses),
+      paid,
+      paymentMethod: paid ? paymentMethod : undefined,
       notes: notes.trim() || undefined,
     })
 
@@ -120,6 +137,8 @@ export function CompleteJobDialog({
     setEarnings('')
     setTimeSpent('')
     setExpenses('')
+    setPaid(true)
+    setPaymentMethod('cash')
     setNotes('')
     setErrors({})
     onClose()
@@ -220,6 +239,54 @@ export function CompleteJobDialog({
                         className="flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
                       />
                       {errors.expenses && <p className="text-sm text-red-600">{errors.expenses}</p>}
+                    </div>
+
+                    <div className="grid gap-2">
+                      <span className="text-sm font-medium text-slate-700">Paid?</span>
+                      <div className="inline-flex rounded-xl border border-slate-300 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setPaid(true)}
+                          className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                            paid ? 'text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                          style={paid ? { backgroundColor: 'rgb(var(--color-primary))' } : undefined}
+                        >
+                          Paid
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaid(false)}
+                          className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                            !paid ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          Pay later
+                        </button>
+                      </div>
+                      <AnimatePresence initial={false}>
+                        {paid && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <select
+                              aria-label="Payment method"
+                              value={paymentMethod}
+                              onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                              className="mt-1 flex h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                            >
+                              {paymentMethodOptions.map((method) => (
+                                <option key={method} value={method}>
+                                  {paymentMethodLabels[method]}
+                                </option>
+                              ))}
+                            </select>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     <div className="grid gap-2">

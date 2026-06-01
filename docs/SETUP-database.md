@@ -15,6 +15,14 @@ It only adds what's missing and migrates old data in place.
   - **adds** `one_time`, `six_weeks`, `two_months`.
 - Adds the `expenses` table (business expenses: gas, blades, supplies) with RLS.
 - Adds `profiles.invoice_template`, `profiles.business_name`, `profiles.stripe_customer_id`.
+- Adds `completed_jobs.paid` (boolean) + `completed_jobs.payment_method`
+  (`cash | etransfer | card | other`) — payment tracking for the Route tab.
+- Adds the `route_stops` table (ordered daily route: client + date + sort order,
+  linked to a completed job once logged) with RLS.
+
+> **Required for the Route tab.** Logging visits and building routes writes the
+> new columns/table above — run this migration before using the Route page, or
+> those writes will fail.
 
 ## How to run it (2 minutes, no CLI needed)
 

@@ -18,8 +18,9 @@ type AuthState = {
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   // Username/password auth helpers
-  signInWithUsername: (username: string, password: string) => Promise<void>
-  signUpWithUsername: (username: string, password: string) => Promise<{ error: Error | null }>
+  /** Accepts a real email or a legacy username. */
+  signInWithUsername: (identifier: string, password: string) => Promise<void>
+  signUpWithUsername: (username: string, email: string, password: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -52,13 +53,13 @@ async function fetchProfileByUsername(username: string): Promise<ProfileRow | nu
   return data
 }
 
-// Generate a placeholder email from username for Supabase auth operations.
-// NOTE: Supabase rejects non-public TLDs like ".local" on signup, so we use a
-// real public TLD. No mail is ever sent (email confirmation must be disabled).
-const AUTH_EMAIL_DOMAIN = 'clienttracker.app'
-const generatePlaceholderEmail = (username: string): string => {
-  return `${username}@${AUTH_EMAIL_DOMAIN}`
-}
+// Username-based auth maps "username" -> "username@<domain>". Existing accounts
+// use the ".local" domain (what we send to Supabase first). Some Supabase projects
+// reject non-public TLDs on SIGNUP, so signup falls back to a valid public TLD when
+// ".local" is refused; sign-in tries both so every account keeps working.
+const PRIMARY_EMAIL_DOMAIN = 'client-tracker.local'
+const FALLBACK_EMAIL_DOMAIN = 'clienttracker.app'
+const emailFor = (username: string, domain: string): string => `${username}@${domain}`
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -124,27 +125,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(p)
       },
       // Username/password auth helpers
-      signInWithUsername: async (username: string, password: string) => {
-        // New accounts use a public-TLD domain; older accounts used "@client-tracker.local".
-        // Try the current domain first, then fall back to the legacy one so existing
-        // users keep working without any migration.
-        const candidates = [generatePlaceholderEmail(username), `${username}@client-tracker.local`]
+      signInWithUsername: async (identifier: string, password: string) => {
+        const id = identifier.trim()
+        // A real email signs in directly. A bare username (no "@") is a legacy
+        // account — map it to the placeholder domains, ".local" first.
+        const candidates = id.includes('@')
+          ? [id]
+          : [emailFor(id, PRIMARY_EMAIL_DOMAIN), emailFor(id, FALLBACK_EMAIL_DOMAIN)]
         let lastError: Error | null = null
         for (const email of candidates) {
           const { error } = await supabase.auth.signInWithPassword({ email, password })
-          if (!error) {
-            console.log('[AuthContext] Sign in successful for username:', username)
-            return
-          }
+          if (!error) return
           lastError = error
         }
-        console.error('[AuthContext] Sign in error:', lastError)
         if (lastError) throw lastError
       },
-      signUpWithUsername: async (username: string, password: string) => {
-        const email = generatePlaceholderEmail(username)
+      signUpWithUsername: async (username: string, email: string, password: string) => {
+        // Real email is the account identity; username is stored on the profile
+        // (via the handle_new_user trigger reading raw_user_meta_data.username).
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             data: { username },

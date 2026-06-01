@@ -6,10 +6,12 @@ import type {
   ExpenseRow,
   PlanTier,
   ProfileRow,
+  RouteStopRow,
 } from '../types/database'
 import type { Client, ClientFormInput, ExpenseType, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
 import type { Expense, ExpenseFormInput } from '../types/expense'
+import type { RouteStop } from '../types/route'
 
 // Select all columns so the app keeps working even before the latest migration
 // has been applied (missing columns simply come back undefined).
@@ -57,7 +59,24 @@ export function completedJobFromRow(row: CompletedJobRow, username: string): Com
     earnings: Number(row.earnings),
     timeSpent: Number(row.time_spent),
     expenses: Number(row.expenses),
+    // `paid`/`payment_method` may be undefined before the migration is applied;
+    // default to unpaid so the app keeps working either way.
+    paid: row.paid ?? false,
+    paymentMethod: row.payment_method ?? undefined,
     notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function routeStopFromRow(row: RouteStopRow, username: string): RouteStop {
+  return {
+    id: row.id,
+    username,
+    clientId: row.client_id,
+    date: row.date,
+    sortOrder: Number(row.sort_order),
+    completedJobId: row.completed_job_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -310,6 +329,8 @@ export async function insertCompletedJob(
       earnings: job.earnings,
       time_spent: job.timeSpent,
       expenses: job.expenses,
+      paid: job.paid,
+      payment_method: job.paid ? job.paymentMethod ?? null : null,
       notes: job.notes?.trim() ? job.notes.trim() : null,
     })
     .select('*')
@@ -330,6 +351,12 @@ export async function updateCompletedJobRow(
   if (patch.earnings !== undefined) dbPatch.earnings = patch.earnings
   if (patch.timeSpent !== undefined) dbPatch.time_spent = patch.timeSpent
   if (patch.expenses !== undefined) dbPatch.expenses = patch.expenses
+  if (patch.paid !== undefined) {
+    dbPatch.paid = patch.paid
+    // Clearing paid drops the method; setting paid keeps whatever was supplied.
+    if (!patch.paid) dbPatch.payment_method = null
+  }
+  if (patch.paymentMethod !== undefined) dbPatch.payment_method = patch.paymentMethod ?? null
   if (patch.notes !== undefined) {
     dbPatch.notes = patch.notes?.trim() ? patch.notes.trim() : null
   }
@@ -395,4 +422,68 @@ export async function restoreExpenseRow(userId: string, expense: Expense): Promi
     updated_at: expense.updatedAt,
   })
   if (error) throw error
+}
+
+// ---------------- Route stops ----------------
+
+export async function fetchRouteStops(userId: string, username: string): Promise<RouteStop[]> {
+  const { data, error } = await supabase
+    .from('route_stops')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .order('sort_order', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map((row) => routeStopFromRow(row as RouteStopRow, username))
+}
+
+export async function insertRouteStop(
+  userId: string,
+  username: string,
+  input: { clientId: string; date: string; sortOrder: number },
+): Promise<RouteStop> {
+  const { data, error } = await supabase
+    .from('route_stops')
+    .insert({
+      user_id: userId,
+      client_id: input.clientId,
+      date: input.date,
+      sort_order: input.sortOrder,
+    })
+    .select('*')
+    .single()
+  if (error) throw error
+  return routeStopFromRow(data as RouteStopRow, username)
+}
+
+export async function deleteRouteStop(id: string): Promise<void> {
+  const { error } = await supabase.from('route_stops').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** Persist a new ordering for a day's stops (one update per stop). */
+export async function reorderRouteStops(
+  orders: { id: string; sortOrder: number }[],
+): Promise<void> {
+  await Promise.all(
+    orders.map(({ id, sortOrder }) =>
+      supabase.from('route_stops').update({ sort_order: sortOrder }).eq('id', id),
+    ),
+  )
+}
+
+/** Link a stop to the completed job that marks it done (or null to reopen it). */
+export async function setRouteStopJob(
+  id: string,
+  username: string,
+  completedJobId: string | null,
+): Promise<RouteStop | null> {
+  const { data, error } = await supabase
+    .from('route_stops')
+    .update({ completed_job_id: completedJobId })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) throw error
+  return data ? routeStopFromRow(data as RouteStopRow, username) : null
 }

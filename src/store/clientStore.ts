@@ -2,22 +2,28 @@ import { create } from 'zustand'
 import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
 import type { Expense, ExpenseFormInput } from '../types/expense'
+import type { PaymentMethod, RouteStop } from '../types/route'
 import { isSpecialUser, type PlanId } from '../lib/plans'
 import {
   deleteAppointment,
   deleteClient,
   deleteCompletedJob,
   deleteExpenseRow,
+  deleteRouteStop,
   fetchAppointments,
   fetchClients,
   fetchCompletedJobs,
   fetchExpenses,
+  fetchRouteStops,
   insertAppointment,
   insertClient,
   insertCompletedJob,
   insertExpense,
+  insertRouteStop,
+  reorderRouteStops,
   restoreClientRow,
   restoreExpenseRow,
+  setRouteStopJob,
   updateAppointmentRow,
   updateClientRow,
   updateCompletedJobRow,
@@ -37,6 +43,7 @@ type Snapshot = {
   appointments: ScheduledSlot[]
   completedJobs: CompletedJob[]
   expenses: Expense[]
+  routeStops: RouteStop[]
 }
 
 interface ClientState {
@@ -47,6 +54,7 @@ interface ClientState {
   appointments: ScheduledSlot[]
   completedJobs: CompletedJob[]
   expenses: Expense[]
+  routeStops: RouteStop[]
   isLoaded: boolean
   searchTerm: string
   viewMode: ViewMode
@@ -72,6 +80,19 @@ interface ClientState {
   addCompletedJob: (job: Omit<CompletedJob, 'id' | 'username' | 'createdAt' | 'updatedAt'>) => Promise<string>
   updateCompletedJob: (id: string, job: Partial<CompletedJob>) => Promise<void>
   deleteCompletedJob: (id: string) => Promise<void>
+  /** Mark a logged job paid/unpaid (with optional method). */
+  setJobPaid: (id: string, paid: boolean, method?: PaymentMethod) => Promise<void>
+
+  addRouteStop: (input: { clientId: string; date: string }) => Promise<{ ok: true } | { ok: false; reason: string }>
+  removeRouteStop: (id: string) => Promise<void>
+  reorderRouteStops: (date: string, orderedIds: string[]) => Promise<void>
+  /** Log a stop as done: creates a completed job and links it to the stop. */
+  completeRouteStop: (
+    stopId: string,
+    job: Omit<CompletedJob, 'id' | 'username' | 'createdAt' | 'updatedAt'>,
+  ) => Promise<void>
+  /** Reopen a done stop: deletes its completed job and clears the link. */
+  reopenRouteStop: (stopId: string) => Promise<void>
 
   addExpense: (input: ExpenseFormInput) => Promise<string>
   removeExpense: (id: string) => Promise<Expense | undefined>
@@ -104,6 +125,7 @@ function readSnapshot(username: string): Snapshot | null {
       appointments: parsed.appointments ?? [],
       completedJobs: parsed.completedJobs ?? [],
       expenses: parsed.expenses ?? [],
+      routeStops: parsed.routeStops ?? [],
     }
   } catch {
     return null
@@ -122,8 +144,8 @@ function writeSnapshot(username: string | null, snapshot: Snapshot) {
 export const useClientStore = create<ClientState>((set, get) => {
   /** Persist the current in-memory data for the signed-in user. */
   const persist = () => {
-    const { username, clients, appointments, completedJobs, expenses } = get()
-    writeSnapshot(username, { clients, appointments, completedJobs, expenses })
+    const { username, clients, appointments, completedJobs, expenses, routeStops } = get()
+    writeSnapshot(username, { clients, appointments, completedJobs, expenses, routeStops })
   }
 
   return {
@@ -134,6 +156,7 @@ export const useClientStore = create<ClientState>((set, get) => {
     appointments: [],
     completedJobs: [],
     expenses: [],
+    routeStops: [],
     isLoaded: false,
     searchTerm: '',
     viewMode: 'cards',
@@ -148,6 +171,7 @@ export const useClientStore = create<ClientState>((set, get) => {
           appointments: [],
           completedJobs: [],
           expenses: [],
+          routeStops: [],
           isLoaded: false,
         })
         return
@@ -166,6 +190,7 @@ export const useClientStore = create<ClientState>((set, get) => {
         appointments: cached?.appointments ?? [],
         completedJobs: cached?.completedJobs ?? [],
         expenses: cached?.expenses ?? [],
+        routeStops: cached?.routeStops ?? [],
         isLoaded: cached !== null,
       })
       void get().refresh()
@@ -192,15 +217,22 @@ export const useClientStore = create<ClientState>((set, get) => {
           fetchAppointments(userId, username),
           fetchCompletedJobs(userId, username),
         ])
-        // Expenses are best-effort: the table may not exist until the latest
-        // migration is applied — don't let that block the rest of the app.
+        // Expenses and route stops are best-effort: their tables/columns may not
+        // exist until the latest migration is applied — don't let that block the
+        // rest of the app.
         let expenses = get().expenses
         try {
           expenses = await fetchExpenses(userId, username)
         } catch (expenseError) {
           console.warn('[store] expenses fetch failed (run the latest schema.sql?):', expenseError)
         }
-        set({ clients, appointments, completedJobs, expenses, isLoaded: true })
+        let routeStops = get().routeStops
+        try {
+          routeStops = await fetchRouteStops(userId, username)
+        } catch (routeError) {
+          console.warn('[store] route stops fetch failed (run the latest schema.sql?):', routeError)
+        }
+        set({ clients, appointments, completedJobs, expenses, routeStops, isLoaded: true })
         persist()
       } catch (error) {
         console.error('[store] refresh failed:', error)
@@ -218,6 +250,7 @@ export const useClientStore = create<ClientState>((set, get) => {
         appointments: [],
         completedJobs: [],
         expenses: [],
+        routeStops: [],
         isLoaded: false,
         searchTerm: '',
       })
@@ -344,8 +377,96 @@ export const useClientStore = create<ClientState>((set, get) => {
       await deleteCompletedJob(id)
       set((state) => ({
         completedJobs: state.completedJobs.filter((j) => j.id !== id),
+        // A deleted job leaves any linked route stop "to-do" again (DB sets the
+        // FK to null via ON DELETE SET NULL; mirror that locally).
+        routeStops: state.routeStops.map((s) =>
+          s.completedJobId === id ? { ...s, completedJobId: null } : s,
+        ),
       }))
       persist()
+    },
+
+    setJobPaid: async (id, paid, method) => {
+      await get().updateCompletedJob(id, { paid, paymentMethod: paid ? method : undefined })
+    },
+
+    addRouteStop: async ({ clientId, date }) => {
+      const { userId, username } = get()
+      if (!userId || !username) return { ok: false, reason: 'Not signed in.' }
+      const sameDay = get().routeStops.filter((s) => s.date === date)
+      if (sameDay.some((s) => s.clientId === clientId)) {
+        return { ok: false, reason: 'That client is already on this route.' }
+      }
+      const nextOrder = sameDay.reduce((max, s) => Math.max(max, s.sortOrder), -1) + 1
+      try {
+        const stop = await insertRouteStop(userId, username, { clientId, date, sortOrder: nextOrder })
+        set((state) => ({ routeStops: [...state.routeStops, stop] }))
+        persist()
+        return { ok: true }
+      } catch (error) {
+        console.error('[store] addRouteStop failed:', error)
+        return { ok: false, reason: 'Could not add stop. Try again.' }
+      }
+    },
+
+    removeRouteStop: async (id) => {
+      await deleteRouteStop(id)
+      set((state) => ({ routeStops: state.routeStops.filter((s) => s.id !== id) }))
+      persist()
+    },
+
+    reorderRouteStops: async (date, orderedIds) => {
+      const orders = orderedIds.map((id, index) => ({ id, sortOrder: index }))
+      const orderMap = new Map(orders.map((o) => [o.id, o.sortOrder]))
+      set((state) => ({
+        routeStops: state.routeStops.map((s) =>
+          s.date === date && orderMap.has(s.id) ? { ...s, sortOrder: orderMap.get(s.id) as number } : s,
+        ),
+      }))
+      persist()
+      try {
+        await reorderRouteStops(orders)
+      } catch (error) {
+        console.error('[store] reorderRouteStops failed:', error)
+      }
+    },
+
+    completeRouteStop: async (stopId, job) => {
+      const { username } = get()
+      if (!username) return
+      const jobId = await get().addCompletedJob(job)
+      try {
+        const updated = await setRouteStopJob(stopId, username, jobId)
+        set((state) => ({
+          routeStops: state.routeStops.map((s) =>
+            s.id === stopId ? updated ?? { ...s, completedJobId: jobId } : s,
+          ),
+        }))
+      } catch (error) {
+        console.error('[store] completeRouteStop link failed:', error)
+        set((state) => ({
+          routeStops: state.routeStops.map((s) =>
+            s.id === stopId ? { ...s, completedJobId: jobId } : s,
+          ),
+        }))
+      }
+      persist()
+    },
+
+    reopenRouteStop: async (stopId) => {
+      const stop = get().routeStops.find((s) => s.id === stopId)
+      if (!stop) return
+      if (stop.completedJobId) {
+        // Deleting the job nulls the stop's link (handled in deleteCompletedJob).
+        await get().deleteCompletedJob(stop.completedJobId)
+      } else {
+        set((state) => ({
+          routeStops: state.routeStops.map((s) =>
+            s.id === stopId ? { ...s, completedJobId: null } : s,
+          ),
+        }))
+        persist()
+      }
     },
 
     addExpense: async (input) => {

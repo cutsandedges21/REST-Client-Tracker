@@ -14,8 +14,9 @@ import { GlowCard } from './components/GlowCard'
 import { ScheduleCalendar } from './components/ScheduleCalendar'
 import { AllTimeStats } from './components/AllTimeStats'
 import { ProfitChart } from './components/ProfitChart'
-import { CompleteJobDialog } from './components/CompleteJobDialog'
+import { CompleteJobDialog, type CompleteJobInput } from './components/CompleteJobDialog'
 import { InvoiceDialog } from './components/InvoiceDialog'
+import { RoutePage } from './pages/RoutePage'
 import { AnimatedBackground } from './components/AnimatedBackground'
 import { RestMark } from './components/RestMark'
 import { AppNav, type AppTab } from './components/AppNav'
@@ -56,6 +57,7 @@ export function AuthedApp() {
     appointments,
     completedJobs,
     expenses,
+    routeStops,
     isLoaded,
     searchTerm,
     viewMode,
@@ -72,6 +74,12 @@ export function AuthedApp() {
     setSearchTerm,
     setViewMode,
     addCompletedJob,
+    addRouteStop,
+    removeRouteStop,
+    reorderRouteStops,
+    completeRouteStop,
+    reopenRouteStop,
+    setJobPaid,
     saveAndClear,
   } = useClientStore()
 
@@ -224,17 +232,9 @@ export function AuthedApp() {
     setCompleteJobOpen(true)
   }
 
-  const handleSaveJob = async (job: {
-    clientId: string
-    clientName: string
-    date: string
-    earnings: number
-    timeSpent: number
-    expenses: number
-    notes?: string
-  }) => {
+  const handleSaveJob = async (job: CompleteJobInput) => {
     await addCompletedJob(job)
-    toast.success('Job logged')
+    toast.success(job.paid ? 'Job logged & paid' : 'Job logged — marked unpaid')
   }
 
   const handleUpgrade = async (planId: PlanId) => {
@@ -383,6 +383,20 @@ export function AuthedApp() {
 
                   <ExpensesCard />
                 </>
+              )}
+
+              {tab === 'route' && (
+                <RoutePage
+                  clients={clients}
+                  routeStops={routeStops}
+                  completedJobs={completedJobs}
+                  addRouteStop={addRouteStop}
+                  removeRouteStop={removeRouteStop}
+                  reorderRouteStops={reorderRouteStops}
+                  completeRouteStop={completeRouteStop}
+                  reopenRouteStop={reopenRouteStop}
+                  setJobPaid={setJobPaid}
+                />
               )}
 
               {tab === 'schedule' && (
