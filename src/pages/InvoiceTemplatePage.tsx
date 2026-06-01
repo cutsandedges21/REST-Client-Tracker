@@ -17,7 +17,7 @@ type InvoiceTemplatePageProps = {
 export function InvoiceTemplatePage({ onBack }: InvoiceTemplatePageProps) {
   const { user, profile, refreshProfile } = useAuth()
   const { colorTheme } = useTheme()
-  const [businessName, setBusinessName] = useState(profile?.business_name ?? '')
+  const [businessName, setBusinessName] = useState(profile?.business_name ?? 'Mossimo Bianco')
   const [template, setTemplate] = useState(profile?.invoice_template ?? DEFAULT_INVOICE_TEMPLATE)
   const [accentColor, setAccentColor] = useState<string>(
     () => profile?.invoice_accent_color ?? rgbStringToHex(colorThemes[colorTheme].rgb.primaryDark),
@@ -29,13 +29,13 @@ export function InvoiceTemplatePage({ onBack }: InvoiceTemplatePageProps) {
   const previewHtml = useMemo(
     () =>
       renderInvoiceHtml({
-        businessName: businessName.trim() || 'My Business',
+        businessName: businessName.trim() || 'Mossimo Bianco',
         clientName: 'Alex Johnson',
         amount: '$50.00',
         date: today,
         message: fillTemplate(template, {
           client: 'Alex Johnson',
-          business: businessName.trim() || 'My Business',
+          business: businessName.trim() || 'Mossimo Bianco',
           date: today,
           amount: '$50.00',
         }),

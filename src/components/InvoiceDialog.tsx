@@ -34,7 +34,7 @@ const longDate = (d: string) =>
 export function InvoiceDialog({ open, client, onClose, onEditTemplate }: InvoiceDialogProps) {
   const { profile, user } = useAuth()
   const { colorTheme } = useTheme()
-  const business = profile?.business_name?.trim() || profile?.account_name?.trim() || 'My Lawn Care'
+  const business = profile?.business_name?.trim() || profile?.account_name?.trim() || 'Mossimo Bianco'
   const template = profile?.invoice_template?.trim() || DEFAULT_INVOICE_TEMPLATE
   const accentDark =
     profile?.invoice_accent_color ??

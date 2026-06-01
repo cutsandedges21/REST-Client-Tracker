@@ -97,7 +97,6 @@ export function renderInvoiceHtml(d: InvoiceEmailData): string {
           <div style="color:rgba(255,255,255,0.82);font-size:13px;margin-top:4px;">${escapeHtml(d.date)}</div>
         </td></tr>
         <tr><td style="background-color:#ffffff;padding:36px 40px;border-left:1px solid #e6e8eb;border-right:1px solid #e6e8eb;">
-          <p style="margin:0 0 18px;font-size:16px;color:#1a1a1a;">Hi ${escapeHtml(d.clientName)},</p>
           ${messageHtml}
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:6px;">
             <tr>
