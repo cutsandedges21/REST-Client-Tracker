@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronRight, CreditCard, FileText, HelpCircle, LogOut, Palette, Search, User } from 'lucide-react'
@@ -114,19 +114,44 @@ export function AuthedApp() {
     if (isLoaded) reminderScheduler.updateData(appointments, clients)
   }, [appointments, clients, isLoaded])
 
-  // Handle return from Stripe Checkout.
+  // Handle return from Stripe Checkout. The plan is written by the Stripe
+  // webhook a beat *after* the redirect, so a single refresh can read the old
+  // plan. Poll a few times until the new plan lands. Guarded by a ref so the
+  // poll fires once even though stripping the query param re-runs this effect.
+  const checkoutHandled = useRef(false)
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
   useEffect(() => {
     const result = searchParams.get('checkout')
     if (!result) return
-    if (result === 'success') {
-      toast.success('Payment received — your plan is updating shortly.')
-      void refreshProfile()
-    } else if (result === 'cancel') {
-      toast.info('Checkout canceled.')
-    }
+
+    // Clear the query param immediately (idempotent across re-runs).
     const next = new URLSearchParams(searchParams)
     next.delete('checkout')
     setSearchParams(next, { replace: true })
+
+    if (checkoutHandled.current) return
+    checkoutHandled.current = true
+
+    if (result === 'cancel') {
+      toast.info('Checkout canceled.')
+      return
+    }
+    if (result === 'success') {
+      toast.success('Payment received — your plan is updating shortly.')
+      void (async () => {
+        for (const delay of [0, 1500, 3000, 5000, 8000]) {
+          await new Promise((resolve) => setTimeout(resolve, delay))
+          if (!mountedRef.current) return
+          await refreshProfile()
+        }
+      })()
+    }
   }, [searchParams, refreshProfile, setSearchParams])
 
   // First-time users get a one-off guided tour (per device, per account).

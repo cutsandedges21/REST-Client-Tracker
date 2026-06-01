@@ -42,7 +42,7 @@ supabase link --project-ref apkysupvpahnkibjfrin
 1. Go to <https://dashboard.stripe.com/test/products> (make sure the toggle in
    the top bar says **Test mode**).
 2. **Add product** → name it `REST Pro` → add a **recurring** price of
-   `C$9.00 / month` → Save. Copy the **Price ID** (looks like `price_123...`).
+   `C$18.00 / month` → Save. Copy the **Price ID** (looks like `price_123...`).
 3. **Add product** → `REST Enterprise` → recurring `C$29.00 / month` → Save.
    Copy that **Price ID** too.
 

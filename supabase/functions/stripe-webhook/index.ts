@@ -56,8 +56,21 @@ Deno.serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.user_id || null
         const plan = (sub.metadata?.plan as Plan | undefined) ?? 'pro'
-        const active = sub.status === 'active' || sub.status === 'trialing'
-        if (userId) await setPlan(userId, active ? plan : 'free', sub.customer as string)
+        if (!userId) break
+        // A new subscription briefly reports status `incomplete` while the first
+        // payment confirms. Treating that (or `past_due`) as a downgrade races
+        // with the `pro` write from checkout.session.completed and can clobber
+        // it to `free`. So only upgrade on a confirmed-active status, and only
+        // downgrade on a terminal status. Transient states are left untouched.
+        if (sub.status === 'active' || sub.status === 'trialing') {
+          await setPlan(userId, plan, sub.customer as string)
+        } else if (
+          sub.status === 'canceled' ||
+          sub.status === 'unpaid' ||
+          sub.status === 'incomplete_expired'
+        ) {
+          await setPlan(userId, 'free', sub.customer as string)
+        }
         break
       }
       case 'customer.subscription.deleted': {
