@@ -405,7 +405,8 @@ export const useClientStore = create<ClientState>((set, get) => {
         return { ok: true }
       } catch (error) {
         console.error('[store] addRouteStop failed:', error)
-        return { ok: false, reason: 'Could not add stop. Try again.' }
+        const reason = error instanceof Error ? error.message : 'Could not add stop. Try again.'
+        return { ok: false, reason }
       }
     },
 

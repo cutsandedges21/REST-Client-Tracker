@@ -97,9 +97,18 @@ export function RoutePage({
     return { total, owed, done }
   }, [dayStops, jobsById, clientsById])
 
+  // Only money owed for visits that came from a route stop (any day) — not
+  // historical jobs logged elsewhere — should show here.
+  const routeJobIds = useMemo(
+    () => new Set(routeStops.map((s) => s.completedJobId).filter((id): id is string => Boolean(id))),
+    [routeStops],
+  )
   const owedJobs = useMemo(
-    () => completedJobs.filter((j) => !j.paid).sort((a, b) => b.date.localeCompare(a.date)),
-    [completedJobs],
+    () =>
+      completedJobs
+        .filter((j) => !j.paid && routeJobIds.has(j.id))
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [completedJobs, routeJobIds],
   )
   const owedTotal = useMemo(() => owedJobs.reduce((sum, j) => sum + j.earnings, 0), [owedJobs])
 
@@ -108,10 +117,23 @@ export function RoutePage({
     if (!result.ok) toast.error((result as { ok: false; reason: string }).reason)
   }
 
-  const handleSaveLog = (job: CompleteJobInput) => {
+  const handleSaveLog = async (job: CompleteJobInput) => {
     if (!loggingStop) return
-    void completeRouteStop(loggingStop.id, job)
-    toast.success(job.paid ? 'Visit logged & paid' : 'Visit logged — marked unpaid')
+    try {
+      await completeRouteStop(loggingStop.id, job)
+      toast.success(job.paid ? 'Visit logged & paid' : 'Visit logged — marked unpaid')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not log visit.')
+    }
+  }
+
+  const handleMarkPaid = async (jobId: string) => {
+    try {
+      await setJobPaid(jobId, true)
+      toast.success('Marked paid')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not mark paid.')
+    }
   }
 
   return (
@@ -226,7 +248,7 @@ export function RoutePage({
                 onLog={() => setLoggingStop(stop)}
                 onReopen={() => void reopenRouteStop(stop.id)}
                 onRemove={() => void removeRouteStop(stop.id)}
-                onMarkPaid={() => job && void setJobPaid(job.id, true)}
+                onMarkPaid={() => job && void handleMarkPaid(job.id)}
               />
             )
           })}
@@ -322,7 +344,7 @@ export function RoutePage({
                         <span className="tabular-nums text-sm font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(job.earnings)}</span>
                         <button
                           type="button"
-                          onClick={() => void setJobPaid(job.id, true)}
+                          onClick={() => void handleMarkPaid(job.id)}
                           className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
                           style={{ backgroundColor: 'rgb(var(--color-primary))' }}
                         >
