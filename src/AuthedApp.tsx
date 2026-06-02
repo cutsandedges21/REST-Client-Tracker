@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -77,7 +77,6 @@ export function AuthedApp() {
     routeStops,
     isLoaded,
     searchTerm,
-    viewMode,
     cardDensity,
     username,
     plan,
@@ -87,7 +86,6 @@ export function AuthedApp() {
     removeClient,
     restoreClient,
     setSearchTerm,
-    setViewMode,
     setCardDensity,
     addCompletedJob,
     addRouteStop,
@@ -456,25 +454,12 @@ export function AuthedApp() {
                           ? `${recurringClients.length} ${recurringClients.length === 1 ? 'client' : 'clients'}`
                           : `${filteredClients.length} of ${recurringClients.length}`}
                       </p>
-                      <div className="flex items-center gap-2">
-                        {viewMode === 'cards' && (
-                          <DensityControl value={cardDensity} onChange={setCardDensity} />
-                        )}
-                        <div className="inline-flex rounded-xl border border-slate-300 p-1">
-                          <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
-                            Cards
-                          </ToggleButton>
-                          <ToggleButton active={viewMode === 'table'} onClick={() => setViewMode('table')}>
-                            Table
-                          </ToggleButton>
-                        </div>
-                      </div>
+                      <DensityControl value={cardDensity} onChange={setCardDensity} />
                     </div>
                   </GlowCard>
 
                   <ClientList
                     clients={filteredClients}
-                    viewMode={viewMode}
                     density={cardDensity}
                     onRemove={setPendingDelete}
                     onEdit={setEditingClient}
@@ -492,7 +477,6 @@ export function AuthedApp() {
                       </div>
                       <ClientList
                         clients={filteredOneTime}
-                        viewMode="cards"
                         density={cardDensity}
                         onRemove={setPendingDelete}
                         onEdit={setEditingClient}
@@ -756,21 +740,6 @@ function DensityControl({ value, onChange }: { value: CardDensity; onChange: (de
         )
       })}
     </div>
-  )
-}
-
-function ToggleButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-        active ? 'text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-      }`}
-      style={active ? { backgroundColor: 'rgb(var(--color-primary))' } : {}}
-    >
-      {children}
-    </button>
   )
 }
 

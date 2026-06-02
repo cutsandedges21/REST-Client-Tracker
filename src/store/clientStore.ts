@@ -29,7 +29,6 @@ import {
   updateCompletedJobRow,
 } from '../lib/api'
 
-type ViewMode = 'cards' | 'table'
 export type CardDensity = 'full' | 'grid' | 'compact'
 
 type AuthBundle = {
@@ -57,7 +56,6 @@ interface ClientState {
   routeStops: RouteStop[]
   isLoaded: boolean
   searchTerm: string
-  viewMode: ViewMode
   cardDensity: CardDensity
 
   setAuthBundle: (bundle: AuthBundle | null) => void
@@ -99,7 +97,6 @@ interface ClientState {
   restoreExpense: (expense: Expense) => Promise<void>
 
   setSearchTerm: (term: string) => void
-  setViewMode: (mode: ViewMode) => void
   setCardDensity: (density: CardDensity) => void
 }
 
@@ -160,7 +157,6 @@ export const useClientStore = create<ClientState>((set, get) => {
     routeStops: [],
     isLoaded: false,
     searchTerm: '',
-    viewMode: 'cards',
     cardDensity: 'full',
 
     setAuthBundle: (bundle) => {
@@ -508,7 +504,6 @@ export const useClientStore = create<ClientState>((set, get) => {
     },
 
     setSearchTerm: (searchTerm) => set({ searchTerm }),
-    setViewMode: (viewMode) => set({ viewMode }),
     setCardDensity: (cardDensity) => set({ cardDensity }),
   }
 })

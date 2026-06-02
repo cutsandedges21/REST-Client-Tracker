@@ -33,7 +33,6 @@ interface CardActions {
 
 interface ClientListProps extends CardActions {
   clients: Client[]
-  viewMode: 'cards' | 'table'
   density?: CardDensity
 }
 
@@ -42,7 +41,7 @@ function expenseDisplay(client: Client): string {
   return client.expenseType === 'percent' ? `${dollars} (${client.expensePerClient}%)` : dollars
 }
 
-export function ClientList({ clients, viewMode, density = 'full', ...actions }: ClientListProps) {
+export function ClientList({ clients, density = 'full', ...actions }: ClientListProps) {
   if (clients.length === 0) {
     return (
       <GlowCard>
@@ -52,10 +51,6 @@ export function ClientList({ clients, viewMode, density = 'full', ...actions }: 
         </div>
       </GlowCard>
     )
-  }
-
-  if (viewMode === 'table') {
-    return <TableView clients={clients} {...actions} />
   }
 
   return <CardsView clients={clients} density={density} {...actions} />
@@ -351,81 +346,6 @@ function ClientCardBody({ client, onRemove, onEdit, onCompleteJob, onInvoice }: 
   )
 }
 
-function TableView({ clients, onRemove, onCompleteJob, onInvoice }: { clients: Client[] } & CardActions) {
-  return (
-    <GlowCard>
-      <div className="overflow-hidden rounded-[0.9375rem]">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-100/80 text-slate-600">
-              <tr>
-                <Th>Name</Th>
-                <Th>Phone</Th>
-                <Th>Frequency</Th>
-                <th className="px-4 py-3 font-medium">Per visit</th>
-                <th className="px-4 py-3 font-medium">Expense</th>
-                <th className="px-4 py-3 font-medium">Net / mo</th>
-                <Th>Duration</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence initial={false}>
-                {clients.map((client) => {
-                  return (
-                    <motion.tr
-                      key={client.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="border-t border-slate-200/70"
-                    >
-                      <Td>
-                        <p className="font-medium text-slate-900">{client.fullName}</p>
-                        <p className="text-xs text-slate-500">{client.email || '—'}</p>
-                      </Td>
-                      <Td>{client.phone || '—'}</Td>
-                      <Td>{serviceFrequencyLabels[client.serviceFrequency]}</Td>
-                      <td className="px-4 py-3 align-top text-slate-700 tabular">{formatCurrency(client.perCutRate)}</td>
-                      <td className="px-4 py-3 align-top text-slate-700 tabular">{expenseDisplay(client)}</td>
-                      <td className="px-4 py-3 align-top font-medium tabular" style={{ color: `rgb(var(--color-primary-dark))` }}>
-                        {client.serviceFrequency === 'one_time' ? '—' : formatCurrency(getMonthlyNet(client))}
-                      </td>
-                      <Td>{formatDuration(client.cutDurationMinutes)}</Td>
-                      <Td>
-                        <div className="flex gap-1">
-                          {onInvoice && (
-                            <IconButton label={`Invoice ${client.fullName}`} onClick={() => onInvoice(client)}>
-                              <FileText className="h-4 w-4" />
-                            </IconButton>
-                          )}
-                          {onCompleteJob && (
-                            <IconButton label={`Log job for ${client.fullName}`} onClick={() => onCompleteJob(client)}>
-                              <Check className="h-4 w-4" />
-                            </IconButton>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onRemove(client)}
-                            className="rounded-lg p-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
-                            aria-label={`Remove ${client.fullName}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </Td>
-                    </motion.tr>
-                  )
-                })}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </GlowCard>
-  )
-}
-
 function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <button
@@ -454,12 +374,4 @@ function InfoRow({ icon: Icon, text, muted }: { icon: typeof Phone; text: string
       <span className="min-w-0 break-words">{text}</span>
     </p>
   )
-}
-
-function Th({ children }: { children?: ReactNode }) {
-  return <th className="px-4 py-3 font-medium">{children}</th>
-}
-
-function Td({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={cn('px-4 py-3 align-top text-slate-700', className)}>{children}</td>
 }
