@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
 type Mode = 'login' | 'signup'
+type View = 'auth' | 'forgot' | 'forgot-sent'
 
 interface Props {
   mode?: Mode
@@ -38,6 +39,7 @@ export function LoginScreen({ mode = 'login' }: Props) {
   const [searchParams] = useSearchParams()
   const { session, loading: authLoading, signInWithUsername, signUpWithUsername } = useAuth()
 
+  const [view, setView] = useState<View>('auth')
   const [isRegistering, setIsRegistering] = useState(mode === 'signup')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -46,6 +48,9 @@ export function LoginScreen({ mode = 'login' }: Props) {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [confirmationSent, setConfirmationSent] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetError, setResetError] = useState('')
+  const [resetSubmitting, setResetSubmitting] = useState(false)
   const [showIntro, setShowIntro] = useState(() => {
     try {
       return sessionStorage.getItem('rest-intro-seen') !== '1'
@@ -155,14 +160,48 @@ export function LoginScreen({ mode = 'login' }: Props) {
     setConfirmationSent(false)
   }
 
+  const handleForgotPassword = async (e: FormEvent) => {
+    e.preventDefault()
+    setResetError('')
+    if (!EMAIL_REGEX.test(resetEmail.trim())) {
+      setResetError('Enter the email address on your account.')
+      return
+    }
+    setResetSubmitting(true)
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
+        resetEmail.trim(),
+        { redirectTo: `${window.location.origin}/auth/callback?mode=reset` },
+      )
+      if (resetErr) {
+        setResetError(resetErr.message || 'Could not send reset email. Try again.')
+        return
+      }
+      setView('forgot-sent')
+    } finally {
+      setResetSubmitting(false)
+    }
+  }
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
       <AnimatePresence>{showIntro && <IntroAnimation onDone={dismissIntro} />}</AnimatePresence>
       <AnimatedBackground />
-      <div className="relative z-10 w-full flex justify-center">
+      <div className="relative z-10 w-full flex flex-col items-center gap-3">
         <GlowCard>
           <div className="w-full max-w-md p-5 sm:p-7 md:p-8">
-            {confirmationSent ? (
+            {view === 'forgot' ? (
+              <ForgotPasswordView
+                email={resetEmail}
+                onEmailChange={setResetEmail}
+                onSubmit={handleForgotPassword}
+                submitting={resetSubmitting}
+                error={resetError}
+                onBack={() => { setView('auth'); setResetError('') }}
+              />
+            ) : view === 'forgot-sent' ? (
+              <ForgotSentView email={resetEmail} onBack={() => setView('auth')} />
+            ) : confirmationSent ? (
               <ConfirmationSentView username={username} onBack={() => setConfirmationSent(false)} />
             ) : (
               <>
@@ -208,7 +247,19 @@ export function LoginScreen({ mode = 'login' }: Props) {
                     />
                   </Field>
 
-                  <Field label="Password">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">Password</span>
+                      {!isRegistering && (
+                        <button
+                          type="button"
+                          onClick={() => { setView('forgot'); setResetEmail(email.trim()); setResetError('') }}
+                          className="text-xs font-medium text-slate-500 hover:text-slate-800 underline underline-offset-2"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="password"
                       autoComplete={isRegistering ? 'new-password' : 'current-password'}
@@ -219,7 +270,7 @@ export function LoginScreen({ mode = 'login' }: Props) {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
-                  </Field>
+                  </div>
 
                   {isRegistering && (
                     <Field label="Confirm password">
@@ -263,6 +314,12 @@ export function LoginScreen({ mode = 'login' }: Props) {
             )}
           </div>
         </GlowCard>
+        <p className="text-center text-xs text-slate-400">
+          By signing up you agree to our{' '}
+          <a href="/legal/terms" className="underline hover:text-slate-600">Terms</a>
+          {' '}and{' '}
+          <a href="/legal/privacy" className="underline hover:text-slate-600">Privacy Policy</a>.
+        </p>
       </div>
     </div>
   )
@@ -301,6 +358,94 @@ function ConfirmationSentView({ username, onBack }: { username: string; onBack: 
         className="text-sm font-medium text-slate-600 hover:text-slate-900"
       >
         ← Back to sign up
+      </button>
+    </div>
+  )
+}
+
+function ForgotPasswordView({
+  email,
+  onEmailChange,
+  onSubmit,
+  submitting,
+  error,
+  onBack,
+}: {
+  email: string
+  onEmailChange: (v: string) => void
+  onSubmit: (e: React.FormEvent) => void
+  submitting: boolean
+  error: string
+  onBack: () => void
+}) {
+  return (
+    <>
+      <h1
+        className="mb-1 text-xl font-semibold tracking-tight sm:text-2xl"
+        style={{ color: `rgb(var(--color-primary-dark))` }}
+      >
+        Reset your password
+      </h1>
+      <p className="mb-5 text-sm text-slate-600">
+        Enter your account email and we'll send a reset link.
+      </p>
+      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <Field label="Email">
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            className={inputClasses}
+            placeholder="you@email.com"
+            value={email}
+            onChange={(e) => onEmailChange(e.target.value)}
+          />
+        </Field>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-60"
+          style={{ backgroundColor: `rgb(var(--color-primary))` }}
+        >
+          {submitting ? 'Sending…' : 'Send reset link'}
+        </button>
+      </form>
+      <button
+        type="button"
+        onClick={onBack}
+        className="mt-4 w-full text-sm text-slate-600 hover:text-slate-900"
+      >
+        ← Back to sign in
+      </button>
+    </>
+  )
+}
+
+function ForgotSentView({ email, onBack }: { email: string; onBack: () => void }) {
+  return (
+    <div className="text-center">
+      <h1
+        className="mb-3 text-xl font-semibold tracking-tight sm:text-2xl"
+        style={{ color: `rgb(var(--color-primary-dark))` }}
+      >
+        Check your inbox
+      </h1>
+      <p className="mb-2 text-sm text-slate-600">
+        If an account exists for <span className="font-semibold">{email}</span>, we sent a
+        password reset link. It may take a minute to arrive.
+      </p>
+      <p className="mb-6 text-sm text-slate-600">
+        Click the link in the email, then set your new password.
+      </p>
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-sm font-medium text-slate-600 hover:text-slate-900"
+      >
+        ← Back to sign in
       </button>
     </div>
   )

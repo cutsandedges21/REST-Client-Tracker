@@ -14,7 +14,11 @@ export function AuthCallback() {
     const exchange = async () => {
       try {
         const url = window.location.href
-        const code = new URL(url).searchParams.get('code')
+        const params = new URL(url).searchParams
+        const code = params.get('code')
+        // mode=reset is appended by resetPasswordForEmail's redirectTo so we
+        // can route the user to the password-update form after the code exchange.
+        const mode = params.get('mode')
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(url)
@@ -32,7 +36,7 @@ export function AuthCallback() {
             return
           }
         }
-        navigate('/app', { replace: true })
+        navigate(mode === 'reset' ? '/auth/update-password' : '/app', { replace: true })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error'
         setErrorMessage(message)

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { DollarSign, Timer, Users, TrendingDown, TrendingUp } from 'lucide-react'
+import { DollarSign, Timer, Users } from 'lucide-react'
 import { formatCurrency, formatTotalMonthlyTime } from '../lib/finance'
 import { GlowCard } from './GlowCard'
 

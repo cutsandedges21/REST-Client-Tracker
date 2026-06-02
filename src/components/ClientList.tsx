@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarClock, Clock3, FileText, Mail, MapPin, Pencil, Phone, Trash2, Check } from 'lucide-react'
+import { CalendarClock, Clock3, FileText, Mail, Pencil, Phone, Trash2, Check } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   formatCurrency,

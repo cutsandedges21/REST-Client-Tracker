@@ -10,12 +10,13 @@ export class ErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error) {
-    console.error('[ERROR BOUNDARY] Caught error:', error)
     return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ERROR BOUNDARY] Error details:', error, errorInfo)
+    // Log full details to the console for developers, but never surface raw
+    // error messages to end users (they can leak internal implementation details).
+    console.error('[ErrorBoundary]', error, errorInfo)
   }
 
   render() {
@@ -23,12 +24,9 @@ export class ErrorBoundary extends React.Component<
       return (
         <div className="flex min-h-screen items-center justify-center bg-red-50 p-4">
           <div className="max-w-md rounded-lg border border-red-200 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-semibold text-red-800">Something went wrong</h2>
+            <h2 className="mb-3 text-xl font-semibold text-red-800">Something went wrong</h2>
             <p className="mb-4 text-sm text-red-600">
-              The application encountered an error. Please check the browser console for details.
-            </p>
-            <p className="mb-4 text-xs font-mono text-red-700">
-              Error: {this.state.error?.message || 'Unknown error'}
+              An unexpected error occurred. Please reload the page — if the problem persists, contact support.
             </p>
             <button
               onClick={() => window.location.reload()}

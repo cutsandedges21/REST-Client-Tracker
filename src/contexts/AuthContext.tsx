@@ -39,19 +39,6 @@ async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   return data
 }
 
-async function fetchProfileByUsername(username: string): Promise<ProfileRow | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('username', username)
-    .maybeSingle()
-
-  if (error) {
-    console.error('[AuthContext] failed to fetch profile by username:', error)
-    return null
-  }
-  return data
-}
 
 // Username-based auth maps "username" -> "username@<domain>". Existing accounts
 // use the ".local" domain (what we send to Supabase first). Some Supabase projects
