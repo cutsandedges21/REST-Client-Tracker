@@ -8,7 +8,6 @@ type Status = 'working' | 'error'
 export function AuthCallback() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<Status>('working')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const exchange = async () => {
@@ -23,7 +22,7 @@ export function AuthCallback() {
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(url)
           if (error) {
-            setErrorMessage(error.message)
+            console.error('[AuthCallback] code exchange failed:', error.message)
             setStatus('error')
             return
           }
@@ -38,8 +37,7 @@ export function AuthCallback() {
         }
         navigate(mode === 'reset' ? '/auth/update-password' : '/app', { replace: true })
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
-        setErrorMessage(message)
+        console.error('[AuthCallback] unexpected error:', err)
         setStatus('error')
       }
     }
@@ -55,7 +53,9 @@ export function AuthCallback() {
         ) : (
           <>
             <p className="mb-3 text-sm font-semibold text-red-600">Confirmation failed</p>
-            <p className="mb-4 text-xs text-slate-600">{errorMessage}</p>
+            <p className="mb-4 text-xs text-slate-600">
+              The link may have expired or already been used. Request a new one from the sign-in page.
+            </p>
             <button
               type="button"
               onClick={() => navigate('/login', { replace: true })}

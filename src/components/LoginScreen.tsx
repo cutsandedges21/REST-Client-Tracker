@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { GlowCard } from './GlowCard'
 import { AnimatedBackground } from './AnimatedBackground'
@@ -36,7 +36,6 @@ function describeAuthError(message: string): string {
 
 export function LoginScreen({ mode = 'login' }: Props) {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { session, loading: authLoading, signInWithUsername, signUpWithUsername } = useAuth()
 
   const [view, setView] = useState<View>('auth')
@@ -77,10 +76,9 @@ export function LoginScreen({ mode = 'login' }: Props) {
   // If already signed in, send to /app
   useEffect(() => {
     if (!authLoading && session) {
-      const planParam = searchParams.get('plan')
-      navigate(planParam ? `/app?plan=${planParam}` : '/app', { replace: true })
+      navigate('/app', { replace: true })
     }
-  }, [authLoading, session, navigate, searchParams])
+  }, [authLoading, session, navigate])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

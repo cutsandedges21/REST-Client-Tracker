@@ -99,7 +99,7 @@ export function ContactPage({ onBack }: ContactPageProps) {
                   />
                 </label>
                 <label className="space-y-1.5">
-                  <span className={labelClass}>Reply-to email</span>
+                  <span className={labelClass}>Your email</span>
                   <input
                     className={inputClass}
                     inputMode="email"

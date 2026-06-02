@@ -16,12 +16,18 @@ export function UpdatePasswordPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [checking, setChecking] = useState(true)
 
-  // If there is no active session (e.g. someone navigates here directly),
-  // redirect to login — the reset link must be clicked first.
+  // Block the form until the session check completes. If no session (e.g.
+  // someone navigates here directly without clicking a reset link), redirect
+  // to login immediately so the form never flashes on screen.
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) navigate('/login', { replace: true })
+      if (!data.session) {
+        navigate('/login', { replace: true })
+      } else {
+        setChecking(false)
+      }
     })
   }, [navigate])
 
@@ -49,6 +55,8 @@ export function UpdatePasswordPage() {
       setSubmitting(false)
     }
   }
+
+  if (checking) return null
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">

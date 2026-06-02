@@ -56,9 +56,10 @@ Deno.serve(async (req) => {
     }
     if (!to || !html) return json(req, { error: 'Missing recipient or content' }, 400)
 
-    // Validate email format to prevent sending to arbitrary addresses
+    // Validate email addresses
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(to)) return json(req, { error: 'Invalid recipient email address' }, 400)
+    if (replyTo && !emailRegex.test(replyTo)) return json(req, { error: 'Invalid reply-to email address' }, 400)
 
     // Enforce reasonable size limits
     if (html.length > 100_000) return json(req, { error: 'Invoice content too large' }, 400)

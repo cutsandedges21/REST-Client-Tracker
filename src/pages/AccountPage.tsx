@@ -4,7 +4,7 @@ import { SettingsPage } from '../components/SettingsPage'
 import { GlowCard } from '../components/GlowCard'
 import { Segmented } from '../components/Segmented'
 import { supabase } from '../lib/supabase'
-import { updateProfileAccountName } from '../lib/api'
+import { updateProfileAccountName, ACCOUNT_NAME_MAX } from '../lib/api'
 import { inputClass, labelClass, primaryButtonClass, primaryButtonStyle, ghostButtonClass } from '../lib/ui'
 import { cn } from '../lib/utils'
 import {
@@ -173,6 +173,7 @@ export function AccountPage({
               <input
                 id="account-name"
                 type="text"
+                maxLength={ACCOUNT_NAME_MAX}
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="e.g. Mossimo's Lawn Care"

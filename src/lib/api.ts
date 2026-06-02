@@ -124,10 +124,17 @@ export async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   return data as ProfileRow | null
 }
 
+export const ACCOUNT_NAME_MAX = 80
+export const BUSINESS_NAME_MAX = 80
+export const INVOICE_TEMPLATE_MAX = 5_000
+
 export async function updateProfileAccountName(
   userId: string,
   accountName: string | null,
 ): Promise<void> {
+  if (accountName && accountName.length > ACCOUNT_NAME_MAX) {
+    throw new Error(`Account name must be ${ACCOUNT_NAME_MAX} characters or fewer.`)
+  }
   const { error } = await supabase
     .from('profiles')
     .update({ account_name: accountName })
@@ -146,6 +153,18 @@ export async function updateProfileInvoiceSettings(
     invoiceAccentColor?: string | null
   },
 ): Promise<void> {
+  if (settings.businessName && settings.businessName.length > BUSINESS_NAME_MAX) {
+    throw new Error(`Business name must be ${BUSINESS_NAME_MAX} characters or fewer.`)
+  }
+  if (settings.invoiceTemplate && settings.invoiceTemplate.length > INVOICE_TEMPLATE_MAX) {
+    throw new Error(`Invoice template must be ${INVOICE_TEMPLATE_MAX} characters or fewer.`)
+  }
+  // Validate hex colour format to prevent arbitrary CSS injection in email HTML
+  if (settings.invoiceAccentColor !== undefined && settings.invoiceAccentColor !== null) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(settings.invoiceAccentColor)) {
+      throw new Error('Invalid accent colour — must be a 6-digit hex value.')
+    }
+  }
   const patch: Record<string, unknown> = {}
   if (settings.invoiceTemplate !== undefined) patch.invoice_template = settings.invoiceTemplate
   if (settings.businessName !== undefined) patch.business_name = settings.businessName

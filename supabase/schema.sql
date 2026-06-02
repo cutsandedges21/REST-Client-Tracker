@@ -411,23 +411,33 @@ security definer
 set search_path = public
 as $$
 declare
-  v_plan text;
-  v_count int;
+  v_plan   text;
+  v_limit  int;
+  v_count  int;
 begin
-  -- one_time clients are never limited
+  -- one_time clients are never subject to plan limits
   if new.service_frequency = 'one_time' then
     return new;
   end if;
 
   select plan into v_plan from public.profiles where id = new.user_id;
 
-  if v_plan = 'free' then
+  -- Map each plan to its recurring-client cap; NULL means unlimited.
+  -- Keep this in sync with the clientLimit values in src/lib/plans.ts.
+  v_limit := case v_plan
+    when 'free'       then 3
+    when 'pro'        then 10
+    when 'enterprise' then null
+    else null
+  end;
+
+  if v_limit is not null then
     select count(*) into v_count
     from public.clients
     where user_id = new.user_id
       and service_frequency != 'one_time';
-    if v_count >= 3 then
-      raise exception 'Client limit reached for free plan. Upgrade to Pro for unlimited clients.';
+    if v_count >= v_limit then
+      raise exception 'Client limit reached for % plan.', v_plan;
     end if;
   end if;
 

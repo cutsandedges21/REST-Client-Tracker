@@ -5,7 +5,7 @@ import { GlowCard } from '../components/GlowCard'
 import { DEFAULT_INVOICE_TEMPLATE, INVOICE_PLACEHOLDERS, fillTemplate, renderInvoiceHtml, rgbStringToHex } from '../lib/invoice'
 import { inputClass, labelClass, ghostButtonClass, primaryButtonClass, primaryButtonStyle } from '../lib/ui'
 import { cn } from '../lib/utils'
-import { updateProfileInvoiceSettings } from '../lib/api'
+import { updateProfileInvoiceSettings, BUSINESS_NAME_MAX, INVOICE_TEMPLATE_MAX } from '../lib/api'
 import { colorThemes } from '../lib/colorThemes'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -80,6 +80,7 @@ export function InvoiceTemplatePage({ onBack }: InvoiceTemplatePageProps) {
             <input
               className={inputClass}
               placeholder="e.g. Jordan's Lawn Care"
+              maxLength={BUSINESS_NAME_MAX}
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
             />
@@ -109,6 +110,7 @@ export function InvoiceTemplatePage({ onBack }: InvoiceTemplatePageProps) {
             <span className={labelClass}>Default invoice message</span>
             <textarea
               rows={12}
+              maxLength={INVOICE_TEMPLATE_MAX}
               className={cn(inputClass, 'resize-y leading-relaxed')}
               value={template}
               onChange={(e) => setTemplate(e.target.value)}

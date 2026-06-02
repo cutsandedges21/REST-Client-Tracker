@@ -59,7 +59,7 @@ export const PLANS: Plan[] = [
     name: 'Enterprise',
     priceLabel: '$29/mo',
     tagline: 'For high-volume operators',
-    benefits: ['Everything in Pro', 'Unlimited clients', 'Dedicated support'],
+    benefits: ['Everything in Pro', 'Unlimited clients', 'Customizable UI'],
     clientLimit: null,
     canInvoice: true,
     advancedAnalytics: true,

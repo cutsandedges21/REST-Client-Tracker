@@ -9,7 +9,7 @@ interface ProfitChartProps {
   completedJobs: CompletedJob[]
 }
 
-const TIME_RANGES: TimeRange[] = ['1D', '1W', '2W', '1M', '1Y']
+const TIME_RANGES: TimeRange[] = ['1W', '2W', '1M', '1Y']
 
 export function ProfitChart({ completedJobs }: ProfitChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('1W')

@@ -35,53 +35,69 @@ export function filterJobsByDateRange(jobs: CompletedJob[], timeRange: TimeRange
 }
 
 export function aggregateJobsByTimeUnit(jobs: CompletedJob[], timeRange: TimeRange) {
-  const aggregation: Record<string, { earnings: number; expenses: number }> = {}
+  // Each bucket stores a sortable key alongside its display label so we can
+  // sort chronologically (oldest → newest, left → right) after aggregating.
+  const aggregation: Record<string, { label: string; earnings: number; expenses: number }> = {}
 
   jobs.forEach((job) => {
-    const date = new Date(job.date)
-    let key: string
+    // Parse as local date to avoid UTC-offset day-of-week errors.
+    const [y, m, d] = job.date.split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+
+    let sortKey: string
+    let label: string
 
     switch (timeRange) {
       case '1D': {
-        // Hourly aggregation
         const hour = date.getHours()
-        key = `${hour}:00`
+        sortKey = String(hour).padStart(2, '0')
+        label = `${hour}:00`
         break
       }
       case '1W': {
-        // Day of week
+        // Sort key is the ISO date; label is the short day name.
+        sortKey = job.date
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-        key = days[date.getDay()]
+        label = days[date.getDay()]
         break
       }
       case '2W':
-      case '1M':
-        // Daily
-        key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      case '1M': {
+        // Sort key is ISO date (lexicographic = chronological).
+        sortKey = job.date
+        label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         break
-      case '1Y':
-        // Monthly
-        key = date.toLocaleDateString('en-US', { month: 'short' })
+      }
+      case '1Y': {
+        // Sort key is YYYY-MM so it stays correct across a year boundary.
+        sortKey = `${y}-${String(m).padStart(2, '0')}`
+        label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
         break
+      }
       default:
-        key = date.toLocaleDateString()
+        sortKey = job.date
+        label = date.toLocaleDateString()
     }
 
-    if (!aggregation[key]) {
-      aggregation[key] = { earnings: 0, expenses: 0 }
+    if (!aggregation[sortKey]) {
+      aggregation[sortKey] = { label, earnings: 0, expenses: 0 }
     }
-    aggregation[key].earnings += job.earnings
-    aggregation[key].expenses += job.expenses
+    aggregation[sortKey].earnings += job.earnings
+    aggregation[sortKey].expenses += job.expenses
   })
 
-  return Object.entries(aggregation).map(([name, data]) => ({
-    name,
-    earnings: data.earnings,
-    expenses: data.expenses,
-    profitPercentage: data.earnings > 0
-      ? ((data.earnings - data.expenses) / data.earnings) * 100
-      : 0,
-  }))
+  // Sort ascending so older dates appear on the left of the chart.
+  return Object.entries(aggregation)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, bucket]) => ({
+      name: bucket.label,
+      earnings: bucket.earnings,
+      expenses: bucket.expenses,
+      profitPercentage:
+        bucket.earnings > 0
+          ? ((bucket.earnings - bucket.expenses) / bucket.earnings) * 100
+          : 0,
+    }))
 }
 
 export function calculateOverallProfitPercentage(jobs: CompletedJob[]): number {
