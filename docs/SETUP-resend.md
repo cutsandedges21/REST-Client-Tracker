@@ -1,3 +1,7 @@
+> **Superseded:** invoices/feedback now send through Gmail SMTP, not Resend.
+> See [SETUP-email-gmail.md](./SETUP-email-gmail.md). This doc is kept for reference
+> in case you later move to a verified domain + Resend.
+
 # Stylized invoices via Resend — setup
 
 Invoices are sent as a branded HTML email (logo header, accent banner, details

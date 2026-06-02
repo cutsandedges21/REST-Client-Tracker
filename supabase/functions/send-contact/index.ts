@@ -1,21 +1,23 @@
 // Supabase Edge Function: send-contact
-// Forwards a user's message / feedback to the app owner via Resend, tagged with
-// their plan so Priority (Pro) and Dedicated (Enterprise) messages can be triaged.
+// Forwards a user's message / feedback to the app owner through the owner's Gmail
+// (SMTP + App Password), tagged with their plan so Priority (Pro) and Dedicated
+// (Enterprise) messages can be triaged.
 //
 // Deploy (JWT verification ON — called by the signed-in app):
 //   supabase functions deploy send-contact
 //
-// Required secrets:
-//   RESEND_API_KEY   — your Resend API key (re_...)  [shared with send-invoice]
-//   CONTACT_FROM     — verified sender, e.g. "REST <support@yourdomain.com>"
-//                      (falls back to INVOICE_FROM if unset)
-//   CONTACT_TO       — where messages land (defaults to sportsdude3133@gmail.com)
+// Required secrets (see docs/SETUP-email-gmail.md):
+//   GMAIL_USER          — the Gmail address that sends the mail
+//   GMAIL_APP_PASSWORD  — a 16-char Google App Password
+//   MAIL_FROM_NAME      — (optional) sender display name
+//   CONTACT_TO          — where messages land (defaults to GMAIL_USER, then rest.invoice@gmail.com)
 // Auto-provided by Supabase: SUPABASE_URL, SUPABASE_ANON_KEY
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { MailNotConfiguredError, sendMail } from '../_shared/mailer.ts'
 
 const APP_URL = Deno.env.get('APP_URL') ?? ''
-const DEFAULT_TO = 'sportsdude3133@gmail.com'
+const DEFAULT_TO = 'rest.invoice@gmail.com'
 const ALLOWED_ORIGINS = new Set(
   [APP_URL, 'http://localhost:5173', 'http://localhost:4173'].filter(Boolean),
 )
@@ -78,13 +80,7 @@ Deno.serve(async (req) => {
     if (!trimmed) return json(req, { error: 'Message is empty' }, 400)
     if (trimmed.length > 5000) return json(req, { error: 'Message is too long (5000 char max)' }, 400)
 
-    const apiKey = Deno.env.get('RESEND_API_KEY')
-    const from = Deno.env.get('CONTACT_FROM') ?? Deno.env.get('INVOICE_FROM')
-    const to = Deno.env.get('CONTACT_TO') ?? DEFAULT_TO
-    if (!apiKey || !from) {
-      return json(req, { error: 'Messaging is not set up yet (RESEND_API_KEY / CONTACT_FROM).' }, 503)
-    }
-
+    const to = Deno.env.get('CONTACT_TO') ?? Deno.env.get('GMAIL_USER') ?? DEFAULT_TO
     const priority = PLAN_PRIORITY[plan ?? 'free'] ?? 'Standard'
     const replyTo = fromEmail || user.email || undefined
     const senderLabel = fromName || username || user.email || 'A REST user'
@@ -105,22 +101,15 @@ Deno.serve(async (req) => {
         )}</div>
       </div>`
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from,
-        to,
-        subject,
-        html,
-        ...(replyTo ? { reply_to: replyTo } : {}),
-      }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      return json(req, { error: (data as { message?: string })?.message || 'Resend rejected the message' }, 502)
+    try {
+      await sendMail({ to, subject, html, replyTo })
+    } catch (err) {
+      if (err instanceof MailNotConfiguredError) return json(req, { error: err.message }, 503)
+      console.error('[send-contact] smtp', err)
+      return json(req, { error: err instanceof Error ? err.message : 'Could not send your message' }, 502)
     }
-    return json(req, { ok: true, id: (data as { id?: string })?.id })
+
+    return json(req, { ok: true })
   } catch (error) {
     console.error('[send-contact]', error)
     return json(req, { error: error instanceof Error ? error.message : 'Server error' }, 500)

@@ -29,7 +29,7 @@ import {
   updateCompletedJobRow,
 } from '../lib/api'
 
-type ViewMode = 'cards' | 'table'
+export type CardDensity = 'full' | 'grid' | 'compact'
 
 type AuthBundle = {
   userId: string
@@ -56,7 +56,7 @@ interface ClientState {
   routeStops: RouteStop[]
   isLoaded: boolean
   searchTerm: string
-  viewMode: ViewMode
+  cardDensity: CardDensity
 
   setAuthBundle: (bundle: AuthBundle | null) => void
   refresh: () => Promise<void>
@@ -97,7 +97,7 @@ interface ClientState {
   restoreExpense: (expense: Expense) => Promise<void>
 
   setSearchTerm: (term: string) => void
-  setViewMode: (mode: ViewMode) => void
+  setCardDensity: (density: CardDensity) => void
 }
 
 function slotConflict(
@@ -157,7 +157,7 @@ export const useClientStore = create<ClientState>((set, get) => {
     routeStops: [],
     isLoaded: false,
     searchTerm: '',
-    viewMode: 'cards',
+    cardDensity: 'full',
 
     setAuthBundle: (bundle) => {
       if (!bundle) {
@@ -504,7 +504,7 @@ export const useClientStore = create<ClientState>((set, get) => {
     },
 
     setSearchTerm: (searchTerm) => set({ searchTerm }),
-    setViewMode: (viewMode) => set({ viewMode }),
+    setCardDensity: (cardDensity) => set({ cardDensity }),
   }
 })
 
