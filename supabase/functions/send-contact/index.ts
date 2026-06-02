@@ -10,14 +10,14 @@
 //   GMAIL_USER          — the Gmail address that sends the mail
 //   GMAIL_APP_PASSWORD  — a 16-char Google App Password
 //   MAIL_FROM_NAME      — (optional) sender display name
-//   CONTACT_TO          — where messages land (defaults to GMAIL_USER, then sportsdude3133@gmail.com)
+//   CONTACT_TO          — where messages land (defaults to GMAIL_USER, then cutsandedges21@gmail.com)
 // Auto-provided by Supabase: SUPABASE_URL, SUPABASE_ANON_KEY
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { MailNotConfiguredError, sendMail } from '../_shared/mailer.ts'
 
 const APP_URL = Deno.env.get('APP_URL') ?? ''
-const DEFAULT_TO = 'sportsdude3133@gmail.com'
+const DEFAULT_TO = 'cutsandedges21@gmail.com'
 const ALLOWED_ORIGINS = new Set(
   [APP_URL, 'http://localhost:5173', 'http://localhost:4173'].filter(Boolean),
 )
