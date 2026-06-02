@@ -1,15 +1,18 @@
 // Supabase Edge Function: send-invoice
-// Sends a styled HTML invoice via Resend on behalf of the signed-in user.
+// Sends a styled HTML invoice through the owner's Gmail (SMTP + App Password)
+// on behalf of the signed-in user.
 //
 // Deploy (JWT verification ON — called by the signed-in app):
 //   supabase functions deploy send-invoice
 //
-// Required secrets (see docs/SETUP-resend.md):
-//   RESEND_API_KEY   — your Resend API key (re_...)
-//   INVOICE_FROM     — verified sender, e.g. "Jordan's Lawn Care <invoices@yourdomain.com>"
+// Required secrets (see docs/SETUP-email-gmail.md):
+//   GMAIL_USER          — the Gmail address that sends the mail
+//   GMAIL_APP_PASSWORD  — a 16-char Google App Password
+//   MAIL_FROM_NAME      — (optional) sender display name, e.g. your business name
 // Auto-provided by Supabase: SUPABASE_URL, SUPABASE_ANON_KEY
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { MailNotConfiguredError, sendMail } from '../_shared/mailer.ts'
 
 const APP_URL = Deno.env.get('APP_URL') ?? ''
 const ALLOWED_ORIGINS = new Set(
@@ -65,28 +68,15 @@ Deno.serve(async (req) => {
     if (html.length > 100_000) return json(req, { error: 'Invoice content too large' }, 400)
     if (subject && subject.length > 200) return json(req, { error: 'Subject line too long' }, 400)
 
-    const apiKey = Deno.env.get('RESEND_API_KEY')
-    const from = Deno.env.get('INVOICE_FROM')
-    if (!apiKey || !from) {
-      return json(req, { error: 'Email sending is not set up yet (RESEND_API_KEY / INVOICE_FROM).' }, 503)
+    try {
+      await sendMail({ to, subject: subject || 'Your invoice', html, replyTo })
+    } catch (err) {
+      if (err instanceof MailNotConfiguredError) return json(req, { error: err.message }, 503)
+      console.error('[send-invoice] smtp', err)
+      return json(req, { error: err instanceof Error ? err.message : 'Could not send the invoice' }, 502)
     }
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: subject || 'Your invoice',
-        html,
-        ...(replyTo ? { reply_to: replyTo } : {}),
-      }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      return json(req, { error: (data as { message?: string })?.message || 'Resend rejected the email' }, 502)
-    }
-    return json(req, { ok: true, id: (data as { id?: string })?.id })
+    return json(req, { ok: true })
   } catch (error) {
     console.error('[send-invoice]', error)
     return json(req, { error: error instanceof Error ? error.message : 'Server error' }, 500)
