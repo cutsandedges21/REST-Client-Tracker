@@ -12,6 +12,7 @@ import {
   rgbStringToHex,
 } from '../lib/invoice'
 import { sendInvoiceEmail } from '../lib/invoiceEmail'
+import { realEmailOrUndefined } from '../lib/identity'
 import { colorThemes } from '../lib/colorThemes'
 import { cn } from '../lib/utils'
 import { inputClass, labelClass, ghostButtonClass, primaryButtonClass, primaryButtonStyle } from '../lib/ui'
@@ -39,6 +40,9 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
   const accentDark =
     profile?.invoice_accent_color ??
     rgbStringToHex(colorThemes[colorTheme].rgb.primaryDark)
+  // Only surface a real, client-facing reply-to — never the synthetic
+  // "username@client-tracker.local" login address used for username accounts.
+  const replyTo = realEmailOrUndefined(user?.email)
 
   const [to, setTo] = useState('')
   const [amount, setAmount] = useState('')
@@ -83,10 +87,10 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
             date: longDate(date),
             message,
             accentDark,
-            replyTo: user?.email ?? undefined,
+            replyTo,
           })
         : '',
-    [client, business, amountText, date, message, accentDark, user?.email],
+    [client, business, amountText, date, message, accentDark, replyTo],
   )
 
   if (!client) return null
@@ -100,7 +104,7 @@ export function InvoiceDialog({ open, client, onClose, onEditTemplate }: Invoice
     }
     setSending(true)
     try {
-      await sendInvoiceEmail({ to: to.trim(), subject, html, replyTo: user?.email ?? undefined })
+      await sendInvoiceEmail({ to: to.trim(), subject, html, replyTo })
       toast.success('Invoice sent ✉️')
       onClose()
     } catch (error) {
