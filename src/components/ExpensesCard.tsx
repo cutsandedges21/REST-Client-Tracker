@@ -64,7 +64,7 @@ export function ExpensesCard() {
           </div>
         </div>
 
-        <form className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto]" onSubmit={handleSubmit(submit)}>
+        <form className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end" onSubmit={handleSubmit(submit)}>
           <label className="space-y-1.5">
             <span className={labelClass}>Description</span>
             <input className={inputClass} placeholder="Gas, blades, string trimmer…" {...register('description')} />
@@ -83,7 +83,7 @@ export function ExpensesCard() {
             />
             {errors.amount && <p className="text-xs font-medium text-rose-600">{errors.amount.message}</p>}
           </label>
-          <div className="flex items-end">
+          <div>
             <button type="submit" disabled={isSubmitting} className={`${primaryButtonClass} w-full sm:w-auto`} style={primaryButtonStyle}>
               {isSubmitting ? 'Adding…' : 'Add'}
             </button>
