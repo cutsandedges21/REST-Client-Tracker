@@ -6,11 +6,14 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Grid3x3,
   HelpCircle,
+  LayoutGrid,
   Lock,
   LogOut,
   MessageCircle,
   Palette,
+  Rows3,
   Search,
   Sparkles,
   User,
@@ -48,7 +51,7 @@ import { getPlan, nextPlan, type PlanId } from './lib/plans'
 import { readWeatherPref, writeWeatherPref, type WeatherPlace, type WeatherPref } from './lib/weather'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
-import { useClientStore } from './store/clientStore'
+import { useClientStore, type CardDensity } from './store/clientStore'
 
 type SettingsView = 'main' | 'guide' | 'theme' | 'invoice' | 'account' | 'contact' | 'upgrade'
 
@@ -75,6 +78,7 @@ export function AuthedApp() {
     isLoaded,
     searchTerm,
     viewMode,
+    cardDensity,
     username,
     plan,
     setAuthBundle,
@@ -84,6 +88,7 @@ export function AuthedApp() {
     restoreClient,
     setSearchTerm,
     setViewMode,
+    setCardDensity,
     addCompletedJob,
     addRouteStop,
     removeRouteStop,
@@ -445,19 +450,24 @@ export function AuthedApp() {
                   </div>
 
                   <GlowCard>
-                    <div className="flex items-center justify-between gap-3 p-3 sm:p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-4">
                       <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                         {filteredClients.length === recurringClients.length
                           ? `${recurringClients.length} ${recurringClients.length === 1 ? 'client' : 'clients'}`
                           : `${filteredClients.length} of ${recurringClients.length}`}
                       </p>
-                      <div className="inline-flex rounded-xl border border-slate-300 p-1">
-                        <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
-                          Cards
-                        </ToggleButton>
-                        <ToggleButton active={viewMode === 'table'} onClick={() => setViewMode('table')}>
-                          Table
-                        </ToggleButton>
+                      <div className="flex items-center gap-2">
+                        {viewMode === 'cards' && (
+                          <DensityControl value={cardDensity} onChange={setCardDensity} />
+                        )}
+                        <div className="inline-flex rounded-xl border border-slate-300 p-1">
+                          <ToggleButton active={viewMode === 'cards'} onClick={() => setViewMode('cards')}>
+                            Cards
+                          </ToggleButton>
+                          <ToggleButton active={viewMode === 'table'} onClick={() => setViewMode('table')}>
+                            Table
+                          </ToggleButton>
+                        </div>
                       </div>
                     </div>
                   </GlowCard>
@@ -465,6 +475,7 @@ export function AuthedApp() {
                   <ClientList
                     clients={filteredClients}
                     viewMode={viewMode}
+                    density={cardDensity}
                     onRemove={setPendingDelete}
                     onEdit={setEditingClient}
                     onCompleteJob={handleCompleteJob}
@@ -482,6 +493,7 @@ export function AuthedApp() {
                       <ClientList
                         clients={filteredOneTime}
                         viewMode="cards"
+                        density={cardDensity}
                         onRemove={setPendingDelete}
                         onEdit={setEditingClient}
                         onCompleteJob={handleCompleteJob}
@@ -713,6 +725,36 @@ function MoreTab({
         <LogOut className="h-4 w-4" />
         Sign out
       </button>
+    </div>
+  )
+}
+
+const DENSITY_OPTIONS: { value: CardDensity; label: string; icon: typeof Rows3 }[] = [
+  { value: 'full', label: 'Full view', icon: Rows3 },
+  { value: 'grid', label: 'Grid view', icon: LayoutGrid },
+  { value: 'compact', label: 'Compact view', icon: Grid3x3 },
+]
+
+function DensityControl({ value, onChange }: { value: CardDensity; onChange: (density: CardDensity) => void }) {
+  return (
+    <div role="group" aria-label="Card density" className="inline-flex rounded-xl border border-slate-300 p-1">
+      {DENSITY_OPTIONS.map(({ value: option, label, icon: Icon }) => {
+        const active = option === value
+        return (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            aria-label={label}
+            aria-pressed={active}
+            title={label}
+            className={`rounded-lg p-1.5 transition ${active ? 'text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            style={active ? { backgroundColor: 'rgb(var(--color-primary))' } : {}}
+          >
+            <Icon className="h-4 w-4" />
+          </button>
+        )
+      })}
     </div>
   )
 }
