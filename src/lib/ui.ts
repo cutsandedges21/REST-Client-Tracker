@@ -2,7 +2,7 @@
 // Inputs use a 16px base font size to stop iOS Safari from auto-zooming on focus.
 
 export const inputClass =
-  'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]'
+  'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[rgb(var(--color-primary))] focus:ring-2 focus:ring-[rgb(var(--color-primary-light))]'
 
 export const labelClass = 'text-sm font-medium text-slate-700'
 

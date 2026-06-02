@@ -15,6 +15,12 @@ interface ClientFormProps {
   onSubmit: (values: ClientSchema) => Promise<string>
   onSchedule?: (clientId: string, date: string, time: string) => Promise<void>
   atLimit?: boolean
+  /** Lead sentence for the at-limit banner, e.g. "You've hit the 3-client limit on Free." */
+  limitLead?: string
+  /** Bold upgrade CTA label, e.g. "Upgrade to Pro". */
+  limitCta?: string
+  /** Trailing sentence, e.g. "for up to 10 clients." */
+  limitTrail?: string
   onUpgradeRequired?: () => void
 }
 
@@ -38,7 +44,15 @@ const TIME_OPTIONS = Array.from({ length: 30 }, (_, i) => {
   return { value, label }
 })
 
-export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeRequired }: ClientFormProps) {
+export function ClientForm({
+  onSubmit,
+  onSchedule,
+  atLimit = false,
+  limitLead = "You've hit your client limit on this plan.",
+  limitCta = 'Upgrade',
+  limitTrail = 'to add more clients.',
+  onUpgradeRequired,
+}: ClientFormProps) {
   const [timeUnit, setTimeUnit] = useState<'minutes' | 'hours'>('minutes')
   const [expenseType, setExpenseType] = useState<ExpenseType>('fixed')
   const [scheduleClient, setScheduleClient] = useState(false)
@@ -114,15 +128,15 @@ export function ClientForm({ onSubmit, onSchedule, atLimit = false, onUpgradeReq
             <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               <span className="mt-0.5 text-base">⚡</span>
               <div className="flex-1">
-                You've hit the 3-client limit on the Free plan.{' '}
+                {limitLead}{' '}
                 <button
                   type="button"
                   onClick={onUpgradeRequired}
                   className="font-semibold underline underline-offset-2 hover:text-amber-700"
                 >
-                  Upgrade to Pro
+                  {limitCta}
                 </button>{' '}
-                for unlimited clients.
+                {limitTrail}
               </div>
             </div>
           )}

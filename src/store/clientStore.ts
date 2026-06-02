@@ -3,7 +3,7 @@ import type { Client, ClientFormInput, ScheduledSlot } from '../types/client'
 import type { CompletedJob } from '../types/completedJob'
 import type { Expense, ExpenseFormInput } from '../types/expense'
 import type { PaymentMethod, RouteStop } from '../types/route'
-import type { PlanId } from '../lib/plans'
+import { getPlan, type PlanId } from '../lib/plans'
 import {
   deleteAppointment,
   deleteClient,
@@ -254,10 +254,11 @@ export const useClientStore = create<ClientState>((set, get) => {
       const { userId, username, plan, clients } = get()
       if (!userId || !username) throw new Error('Not signed in')
 
-      // One-time clients don't count toward the free-plan limit and are never blocked.
+      // One-time clients don't count toward the plan limit and are never blocked.
+      const limit = getPlan(plan).clientLimit
       const recurringCount = clients.filter((c) => c.serviceFrequency !== 'one_time').length
-      if (plan === 'free' && data.serviceFrequency !== 'one_time' && recurringCount >= 3) {
-        throw new Error('Client limit reached. Upgrade to Pro for unlimited clients.')
+      if (limit !== null && data.serviceFrequency !== 'one_time' && recurringCount >= limit) {
+        throw new Error(`Client limit reached (${limit} on ${getPlan(plan).name}). Upgrade for more clients.`)
       }
 
       const inserted = await insertClient(userId, username, data)

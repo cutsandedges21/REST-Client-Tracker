@@ -1,23 +1,45 @@
 import { useState } from 'react'
+import { CloudSun, LocateFixed } from 'lucide-react'
 import { SettingsPage } from '../components/SettingsPage'
 import { GlowCard } from '../components/GlowCard'
+import { Segmented } from '../components/Segmented'
 import { supabase } from '../lib/supabase'
 import { updateProfileAccountName } from '../lib/api'
+import { inputClass, labelClass, primaryButtonClass, primaryButtonStyle, ghostButtonClass } from '../lib/ui'
+import { cn } from '../lib/utils'
+import {
+  geocodeCity,
+  getBrowserLocation,
+  type TempUnit,
+  type WeatherPref,
+} from '../lib/weather'
 import { useClientStore } from '../store/clientStore'
 import { useAuth } from '../contexts/AuthContext'
 
 type AccountPageProps = {
   username: string | null
+  weatherPref: WeatherPref
+  onWeatherPrefChange: (pref: WeatherPref) => void
   onSignOut: () => void
   onBack: () => void
 }
 
-export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
+export function AccountPage({
+  username,
+  weatherPref,
+  onWeatherPrefChange,
+  onSignOut,
+  onBack,
+}: AccountPageProps) {
   const { user, profile, refreshProfile } = useAuth()
   const refresh = useClientStore((s) => s.refresh)
   const [resetting, setResetting] = useState(false)
   const [accountName, setAccountName] = useState(profile?.account_name ?? '')
   const [savingName, setSavingName] = useState(false)
+
+  const [cityInput, setCityInput] = useState('')
+  const [locating, setLocating] = useState(false)
+  const [weatherError, setWeatherError] = useState<string | null>(null)
 
   const handleSaveAccountName = async () => {
     if (!user) return
@@ -31,6 +53,50 @@ export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
       alert('Failed to save account name. Please try again.')
     } finally {
       setSavingName(false)
+    }
+  }
+
+  const setUnit = (unit: TempUnit) => onWeatherPrefChange({ ...weatherPref, unit })
+
+  const toggleWeather = (enabled: boolean) => {
+    setWeatherError(null)
+    onWeatherPrefChange({ ...weatherPref, enabled })
+  }
+
+  const useMyLocation = async () => {
+    setLocating(true)
+    setWeatherError(null)
+    try {
+      const coords = await getBrowserLocation()
+      onWeatherPrefChange({
+        ...weatherPref,
+        enabled: true,
+        place: { ...coords, label: 'My location' },
+      })
+    } catch (err) {
+      setWeatherError(err instanceof Error ? err.message : 'Could not get your location.')
+    } finally {
+      setLocating(false)
+    }
+  }
+
+  const setCity = async () => {
+    const q = cityInput.trim()
+    if (!q) return
+    setLocating(true)
+    setWeatherError(null)
+    try {
+      const place = await geocodeCity(q)
+      if (!place) {
+        setWeatherError(`Couldn't find "${q}". Try a nearby city.`)
+        return
+      }
+      onWeatherPrefChange({ ...weatherPref, enabled: true, place })
+      setCityInput('')
+    } catch (err) {
+      setWeatherError(err instanceof Error ? err.message : 'Could not look up that place.')
+    } finally {
+      setLocating(false)
     }
   }
 
@@ -110,18 +176,97 @@ export function AccountPage({ username, onSignOut, onBack }: AccountPageProps) {
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="e.g. Mossimo's Lawn Care"
-                className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                className={cn(inputClass, 'flex-1')}
               />
               <button
                 type="button"
                 onClick={handleSaveAccountName}
                 disabled={savingName}
-                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-white shadow-sm transition disabled:opacity-60"
-                style={{ backgroundColor: 'var(--color-primary)' }}
+                className={cn(primaryButtonClass, 'sm:w-auto')}
+                style={primaryButtonStyle}
               >
                 {savingName ? 'Saving…' : 'Save'}
               </button>
             </div>
+          </div>
+
+          <div className="border-t border-slate-200 pt-5">
+            <div className="flex items-center gap-2">
+              <CloudSun className="h-5 w-5" style={{ color: 'rgb(var(--color-primary))' }} />
+              <h3 className="text-base font-semibold tracking-tight text-slate-900">Local weather</h3>
+            </div>
+            <p className="mt-1 text-sm text-slate-600">
+              Show today's conditions on your Home tab — handy for planning outdoor jobs.
+            </p>
+
+            <label className="mt-3 flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                checked={weatherPref.enabled}
+                onChange={(e) => toggleWeather(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300"
+                style={{ accentColor: 'rgb(var(--color-primary))' }}
+              />
+              <span className={labelClass}>Show weather on Home</span>
+            </label>
+
+            {weatherPref.enabled && (
+              <div className="mt-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <span className={labelClass}>Units</span>
+                  <Segmented<TempUnit>
+                    ariaLabel="Temperature unit"
+                    value={weatherPref.unit}
+                    onChange={setUnit}
+                    options={[
+                      { value: 'c', label: '°C' },
+                      { value: 'f', label: '°F' },
+                    ]}
+                  />
+                </div>
+
+                <div className="text-sm text-slate-600">
+                  Location:{' '}
+                  <span className="font-medium text-slate-800">
+                    {weatherPref.place?.label ?? 'not set'}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={useMyLocation}
+                    disabled={locating}
+                    className={cn(ghostButtonClass, 'sm:w-auto')}
+                  >
+                    <LocateFixed className="h-4 w-4" style={{ color: 'rgb(var(--color-primary))' }} />
+                    {locating ? 'Locating…' : 'Use my location'}
+                  </button>
+                  <div className="flex flex-1 gap-2">
+                    <input
+                      className={cn(inputClass, 'flex-1')}
+                      value={cityInput}
+                      onChange={(e) => setCityInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void setCity()
+                      }}
+                      placeholder="Or type a city…"
+                    />
+                    <button
+                      type="button"
+                      onClick={setCity}
+                      disabled={locating || !cityInput.trim()}
+                      className={cn(primaryButtonClass, 'shrink-0')}
+                      style={primaryButtonStyle}
+                    >
+                      Set
+                    </button>
+                  </div>
+                </div>
+
+                {weatherError && <p className="text-sm font-medium text-rose-600">{weatherError}</p>}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-slate-200 pt-5">

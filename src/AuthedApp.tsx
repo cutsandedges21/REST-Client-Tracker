@@ -1,7 +1,20 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, CreditCard, FileText, HelpCircle, LogOut, Palette, Search, User } from 'lucide-react'
+import {
+  BarChart3,
+  ChevronRight,
+  CreditCard,
+  FileText,
+  HelpCircle,
+  Lock,
+  LogOut,
+  MessageCircle,
+  Palette,
+  Search,
+  Sparkles,
+  User,
+} from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { ClientEditDialog } from './components/ClientEditDialog'
 import { ClientForm } from './components/ClientForm'
@@ -24,17 +37,20 @@ import { ThemePage } from './pages/ThemePage'
 import { GuidePage } from './pages/GuidePage'
 import { InvoiceTemplatePage } from './pages/InvoiceTemplatePage'
 import { AccountPage } from './pages/AccountPage'
+import { ContactPage } from './pages/ContactPage'
 import { UpgradePage } from './pages/UpgradePage'
+import { WeatherChip } from './components/WeatherChip'
 import { getDashboardMetrics } from './lib/finance'
 import { startCheckout } from './lib/billing'
 import { useTheme } from './contexts/ThemeContext'
 import { useAuth } from './contexts/AuthContext'
-import { getPlan, type PlanId } from './lib/plans'
+import { getPlan, nextPlan, type PlanId } from './lib/plans'
+import { readWeatherPref, writeWeatherPref, type WeatherPlace, type WeatherPref } from './lib/weather'
 import type { Client } from './types/client'
 import type { ClientSchema } from './lib/validation'
 import { useClientStore } from './store/clientStore'
 
-type SettingsView = 'main' | 'guide' | 'theme' | 'invoice' | 'account' | 'upgrade'
+type SettingsView = 'main' | 'guide' | 'theme' | 'invoice' | 'account' | 'contact' | 'upgrade'
 
 export function AuthedApp() {
   const navigate = useNavigate()
@@ -49,6 +65,7 @@ export function AuthedApp() {
   const [completeJobOpen, setCompleteJobOpen] = useState(false)
   const [preselectedClientId, setPreselectedClientId] = useState<string | undefined>(undefined)
   const [showTour, setShowTour] = useState(false)
+  const [weatherPref, setWeatherPrefState] = useState<WeatherPref>({ enabled: false, unit: 'c' })
 
   const {
     clients,
@@ -85,6 +102,21 @@ export function AuthedApp() {
   const currentPlan = getPlan(plan)
   const atClientLimit =
     currentPlan.clientLimit !== null && recurringClients.length >= currentPlan.clientLimit
+
+  // Dynamic copy for the "you've hit your client limit" banner, derived from the
+  // current plan + the next tier up (so Free→Pro and Pro→Enterprise both read right).
+  const upgradeTier = nextPlan(plan)
+  const limitLead =
+    currentPlan.clientLimit !== null
+      ? `You've hit the ${currentPlan.clientLimit}-client limit on ${currentPlan.name}.`
+      : ''
+  const limitCta = upgradeTier ? `Upgrade to ${upgradeTier.name}` : 'Upgrade'
+  const limitTrail =
+    upgradeTier && upgradeTier.clientLimit === null
+      ? 'for unlimited clients.'
+      : upgradeTier
+        ? `for up to ${upgradeTier.clientLimit} clients.`
+        : 'for more clients.'
 
   // Sync auth context -> store. Triggers initial data fetch (load-on-login).
   useEffect(() => {
@@ -133,6 +165,29 @@ export function AuthedApp() {
     }
   }, [searchParams, refreshProfile, setSearchParams])
 
+  // Load the per-user weather preference once the username is known.
+  useEffect(() => {
+    if (username) setWeatherPrefState(readWeatherPref(username))
+  }, [username])
+
+  const setWeatherPref = (pref: WeatherPref) => {
+    setWeatherPrefState(pref)
+    writeWeatherPref(username, pref)
+  }
+
+  const handleWeatherPlaceResolved = (place: WeatherPlace) =>
+    setWeatherPref({ ...weatherPref, place })
+
+  // Invoicing is a paid feature — Free users are routed to the upgrade page.
+  const handleInvoice = (client: Client) => {
+    if (!currentPlan.canInvoice) {
+      toast.info('Invoicing is a Pro feature. Upgrade to send invoices.')
+      setView('upgrade')
+      return
+    }
+    setInvoicingClient(client)
+  }
+
   // First-time users get a one-off guided tour (per device, per account).
   useEffect(() => {
     if (!isLoaded || !username) return
@@ -158,24 +213,42 @@ export function AuthedApp() {
     {
       selector: null,
       title: 'Welcome to REST 👋',
-      body: 'A quick 4-step tour of how everything works — about 20 seconds. You can skip anytime.',
-    },
-    {
-      selector: 'home-stats',
-      title: 'Your real numbers',
-      body: 'Home shows all-time earnings, net profit, hourly rate, margin and markup — built from the jobs you log.',
-      onEnter: () => setTab('home'),
+      body: "A quick walk through the six tabs — about 30 seconds. We'll cover adding clients, logging jobs, expenses, your route and more. Skip anytime.",
     },
     {
       selector: 'clients-add',
-      title: 'Add your clients',
-      body: 'Add each customer with their rate, frequency and expenses. Check "Schedule first visit" to send them straight to your Route.',
+      title: '1. Add a client',
+      body: 'Start on the Add tab. Enter the client\'s rate, how often you visit, and your cost per visit. Tick "Schedule first visit" to drop them straight onto your route.',
       onEnter: () => setTab('add'),
+    },
+    {
+      selector: 'clients-search',
+      title: '2. Find & manage clients',
+      body: 'The Clients tab lists everyone. Search by name, address, phone or email, then use the card buttons: ✏️ edit, 📄 invoice, ✓ log a finished job, 🗑️ remove.',
+      onEnter: () => setTab('clients'),
+    },
+    {
+      selector: 'expenses-card',
+      title: '3. Track expenses',
+      body: 'On the Expenses tab, log business costs that aren\'t tied to one client — gas, blades, equipment. They\'re pulled out of your profit automatically.',
+      onEnter: () => setTab('expenses'),
+    },
+    {
+      selector: 'route-page',
+      title: '4. Plan your route',
+      body: 'The Route tab is your day. Add stops, drag to reorder, then tap a stop to mark the job done — which logs it to your earnings in one move.',
+      onEnter: () => setTab('route'),
+    },
+    {
+      selector: 'home-stats',
+      title: '5. Watch your numbers',
+      body: 'Home turns every logged job into real figures — earnings, net profit, hourly rate, margin and markup — plus charts and a monthly projection.',
+      onEnter: () => setTab('home'),
     },
     {
       selector: 'guide-link',
       title: 'Help is always here',
-      body: "Whenever you're unsure, open \"How to use REST\" for a full walkthrough of every feature.",
+      body: 'Stuck later? Open "How to use REST" any time for a full walkthrough, or use Contact to message me directly.',
       onEnter: () => setTab('more'),
       cta: 'Open the guide',
       onCta: () => setView('guide'),
@@ -295,7 +368,15 @@ export function AuthedApp() {
       ) : view === 'invoice' ? (
         <InvoiceTemplatePage onBack={() => setView('main')} />
       ) : view === 'account' ? (
-        <AccountPage username={username} onSignOut={handleLogout} onBack={() => setView('main')} />
+        <AccountPage
+          username={username}
+          weatherPref={weatherPref}
+          onWeatherPrefChange={setWeatherPref}
+          onSignOut={handleLogout}
+          onBack={() => setView('main')}
+        />
+      ) : view === 'contact' ? (
+        <ContactPage onBack={() => setView('main')} />
       ) : view === 'upgrade' ? (
         <UpgradePage currentPlan={plan} onUpgrade={handleUpgrade} onBack={() => setView('main')} />
       ) : (
@@ -306,23 +387,32 @@ export function AuthedApp() {
             <PlanChip planName={currentPlan.name} accountLabel={accountLabel} />
           </header>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-5 sm:gap-6"
-            >
+          {/* Keyed fade — no AnimatePresence/exit so there's no empty-frame gap or
+              layout double when switching tabs (smoother on mobile). */}
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="flex flex-col gap-5 sm:gap-6"
+          >
               {tab === 'home' && (
                 <>
+                  {weatherPref.enabled && (
+                    <WeatherChip pref={weatherPref} onPlaceResolved={handleWeatherPlaceResolved} />
+                  )}
                   <div data-tour="home-stats">
                     <AllTimeStats completedJobs={completedJobs} expenses={expenses} />
                   </div>
                   <DashboardStats {...metrics} />
-                  <ProfitChart completedJobs={completedJobs} />
-                  <EarningsChart clients={recurringClients} />
+                  {currentPlan.advancedAnalytics ? (
+                    <>
+                      <ProfitChart completedJobs={completedJobs} />
+                      <EarningsChart clients={recurringClients} />
+                    </>
+                  ) : (
+                    <AnalyticsUpsell onUpgrade={() => setView('upgrade')} />
+                  )}
                 </>
               )}
 
@@ -335,6 +425,9 @@ export function AuthedApp() {
                       if (!result.ok) toast.error((result as { ok: false; reason: string }).reason)
                     }}
                     atLimit={atClientLimit}
+                    limitLead={limitLead}
+                    limitCta={limitCta}
+                    limitTrail={limitTrail}
                     onUpgradeRequired={() => setView('upgrade')}
                   />
                 </div>
@@ -342,12 +435,14 @@ export function AuthedApp() {
 
               {tab === 'clients' && (
                 <>
-                  <SearchHero
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    totalClients={recurringClients.length}
-                    visibleClients={filteredClients.length}
-                  />
+                  <div data-tour="clients-search">
+                    <SearchHero
+                      value={searchTerm}
+                      onChange={setSearchTerm}
+                      totalClients={recurringClients.length}
+                      visibleClients={filteredClients.length}
+                    />
+                  </div>
 
                   <GlowCard>
                     <div className="flex items-center justify-between gap-3 p-3 sm:p-4">
@@ -373,7 +468,7 @@ export function AuthedApp() {
                     onRemove={setPendingDelete}
                     onEdit={setEditingClient}
                     onCompleteJob={handleCompleteJob}
-                    onInvoice={setInvoicingClient}
+                    onInvoice={handleInvoice}
                   />
 
                   {filteredOneTime.length > 0 && (
@@ -390,7 +485,7 @@ export function AuthedApp() {
                         onRemove={setPendingDelete}
                         onEdit={setEditingClient}
                         onCompleteJob={handleCompleteJob}
-                        onInvoice={setInvoicingClient}
+                        onInvoice={handleInvoice}
                       />
                     </div>
                   )}
@@ -398,33 +493,37 @@ export function AuthedApp() {
               )}
 
               {tab === 'route' && (
-                <RoutePage
-                  clients={clients}
-                  routeStops={routeStops}
-                  completedJobs={completedJobs}
-                  addRouteStop={addRouteStop}
-                  removeRouteStop={removeRouteStop}
-                  reorderRouteStops={reorderRouteStops}
-                  completeRouteStop={completeRouteStop}
-                  reopenRouteStop={reopenRouteStop}
-                  setJobPaid={setJobPaid}
-                />
+                <div data-tour="route-page">
+                  <RoutePage
+                    clients={clients}
+                    routeStops={routeStops}
+                    completedJobs={completedJobs}
+                    addRouteStop={addRouteStop}
+                    removeRouteStop={removeRouteStop}
+                    reorderRouteStops={reorderRouteStops}
+                    completeRouteStop={completeRouteStop}
+                    reopenRouteStop={reopenRouteStop}
+                    setJobPaid={setJobPaid}
+                  />
+                </div>
               )}
 
               {tab === 'expenses' && (
-                <ExpensesCard />
+                <div data-tour="expenses-card">
+                  <ExpensesCard />
+                </div>
               )}
 
               {tab === 'more' && (
                 <MoreTab
                   planName={currentPlan.name}
                   accountLabel={accountLabel}
+                  canInvoice={currentPlan.canInvoice}
                   onNavigate={setView}
                   onSignOut={handleLogout}
                 />
               )}
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
         </div>
       )}
 
@@ -467,6 +566,39 @@ export function AuthedApp() {
   )
 }
 
+function AnalyticsUpsell({ onUpgrade }: { onUpgrade: () => void }) {
+  return (
+    <GlowCard>
+      <div className="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+        <div className="flex items-start gap-3">
+          <span
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+            style={{ backgroundColor: 'rgba(var(--color-primary-light), 0.9)', color: 'rgb(var(--color-primary-dark))' }}
+          >
+            <BarChart3 className="h-5 w-5" />
+          </span>
+          <div>
+            <h3 className="font-display text-lg font-semibold text-slate-900">Advanced analytics</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Unlock the <span className="font-medium">profit-trend</span> chart and your{' '}
+              <span className="font-medium">revenue-by-client</span> breakdown with Pro.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onUpgrade}
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
+          style={{ backgroundColor: 'rgb(var(--color-primary))' }}
+        >
+          <Sparkles className="h-4 w-4" />
+          Upgrade to Pro
+        </button>
+      </div>
+    </GlowCard>
+  )
+}
+
 function PlanChip({ planName, accountLabel }: { planName: string; accountLabel: string }) {
   return (
     <div className="flex flex-col items-end text-right">
@@ -484,19 +616,36 @@ function PlanChip({ planName, accountLabel }: { planName: string; accountLabel: 
 function MoreTab({
   planName,
   accountLabel,
+  canInvoice,
   onNavigate,
   onSignOut,
 }: {
   planName: string
   accountLabel: string
+  canInvoice: boolean
   onNavigate: (view: SettingsView) => void
   onSignOut: () => void
 }) {
-  const items: { view: SettingsView; label: string; description: string; Icon: typeof Palette }[] = [
+  type MoreItem = {
+    view: SettingsView
+    label: string
+    description: string
+    Icon: typeof Palette
+    /** Render a "Pro" lock badge and route to the upgrade page instead. */
+    locked?: boolean
+  }
+  const items: MoreItem[] = [
     { view: 'guide', label: 'How to use REST', description: 'Guide & feature walkthrough', Icon: HelpCircle },
     { view: 'theme', label: 'Theme', description: 'Light/dark & accent colour', Icon: Palette },
-    { view: 'invoice', label: 'Invoices', description: 'Business name & default message', Icon: FileText },
-    { view: 'account', label: 'Account', description: 'Profile & data', Icon: User },
+    {
+      view: 'invoice',
+      label: 'Invoices',
+      description: canInvoice ? 'Business name & default message' : 'Send styled email invoices',
+      Icon: FileText,
+      locked: !canInvoice,
+    },
+    { view: 'account', label: 'Account', description: 'Profile, weather & data', Icon: User },
+    { view: 'contact', label: 'Contact & feedback', description: 'Message me directly', Icon: MessageCircle },
     { view: 'upgrade', label: 'Plan', description: `Currently on ${planName}`, Icon: CreditCard },
   ]
   return (
@@ -520,12 +669,12 @@ function MoreTab({
 
       <GlowCard>
         <ul className="divide-y divide-slate-200/70 overflow-hidden rounded-[0.9375rem]">
-          {items.map(({ view, label, description, Icon }) => (
+          {items.map(({ view, label, description, Icon, locked }) => (
             <li key={view}>
               <button
                 type="button"
                 data-tour={view === 'guide' ? 'guide-link' : undefined}
-                onClick={() => onNavigate(view)}
+                onClick={() => onNavigate(locked ? 'upgrade' : view)}
                 className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-slate-50"
               >
                 <span
@@ -535,7 +684,18 @@ function MoreTab({
                   <Icon className="h-5 w-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-slate-900">{label}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900">{label}</span>
+                    {locked && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                        style={{ backgroundColor: 'rgb(var(--color-primary))' }}
+                      >
+                        <Lock className="h-2.5 w-2.5" />
+                        Pro
+                      </span>
+                    )}
+                  </span>
                   <span className="block text-sm text-slate-500">{description}</span>
                 </span>
                 <ChevronRight className="h-5 w-5 text-slate-400" />
@@ -603,7 +763,7 @@ function SearchHero({
               inputMode="search"
               autoComplete="off"
               spellCheck={false}
-              className="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-12 pr-10 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-light)]"
+              className="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-12 pr-10 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[rgb(var(--color-primary))] focus:ring-2 focus:ring-[rgb(var(--color-primary-light))]"
               placeholder="Search clients…"
               value={value}
               onChange={(e) => onChange(e.target.value)}

@@ -4,12 +4,15 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  CloudSun,
   Compass,
   CreditCard,
   FileText,
   Lightbulb,
+  MessageCircle,
   PlayCircle,
   Receipt,
+  Route,
   UserPlus,
 } from 'lucide-react'
 import { SettingsPage } from '../components/SettingsPage'
@@ -32,7 +35,7 @@ export function GuidePage({ onBack, onReplayTour }: GuidePageProps) {
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             REST is your whole service business in one place — <Strong>R</Strong>evenue, <Strong>E</Strong>mail,{' '}
             <Strong>S</Strong>chedule, <Strong>T</Strong>rack. Add your clients, log the work you do, watch your
-            real profit, schedule visits, and send invoices — all from your phone. Tap any section below to learn more.
+            real profit, plan your route, and send invoices — all from your phone. Tap any section below to learn more.
           </p>
           {onReplayTour && (
             <button type="button" onClick={onReplayTour} className={`${ghostButtonClass} mt-4`}>
@@ -44,17 +47,19 @@ export function GuidePage({ onBack, onReplayTour }: GuidePageProps) {
       </GlowCard>
 
       <Section icon={Compass} title="Getting around">
-        <p>There are four tabs along the bottom (or the top on a computer):</p>
+        <p>There are six tabs along the bottom (or the top on a computer):</p>
         <ul>
           <li><B>Home</B> — your numbers at a glance: all-time profit, this month's projection, and charts.</li>
-          <li><B>Clients</B> — add, search, edit, invoice and remove clients; track expenses.</li>
-          <li><B>Schedule</B> — a calendar of upcoming visits.</li>
-          <li><B>More</B> — settings, invoices, your plan, and this guide.</li>
+          <li><B>Add</B> — the form for adding a new client.</li>
+          <li><B>Clients</B> — search, edit, invoice, log jobs and remove clients.</li>
+          <li><B>Route</B> — order your stops for the day and mark jobs done.</li>
+          <li><B>Expenses</B> — log business costs that aren't tied to one client.</li>
+          <li><B>More</B> — settings, invoices, your plan, weather, contact, and this guide.</li>
         </ul>
       </Section>
 
-      <Section icon={UserPlus} title="Adding & managing clients">
-        <p>On the <B>Clients</B> tab, scroll to <B>Add client</B> and fill in:</p>
+      <Section icon={UserPlus} title="Adding clients">
+        <p>On the <B>Add</B> tab, fill in:</p>
         <ul>
           <li><B>Rate per visit</B> — what you charge each time.</li>
           <li>
@@ -68,9 +73,46 @@ export function GuidePage({ onBack, onReplayTour }: GuidePageProps) {
           <li><B>Service duration</B> — how long the visit takes (used for your hourly rate). Switch between Min/Hr.</li>
         </ul>
         <p>
-          Each client card has quick actions: <B>edit</B> (pencil), <B>invoice</B> (document), <B>log a job</B>{' '}
-          (check), and <B>remove</B> (trash — with an Undo button if you tap it by mistake). Use the search box to
-          filter, and the <B>Cards / Table</B> toggle to switch the layout.
+          Tick <B>"Schedule first visit"</B> to drop the new client straight onto your Route. Your plan sets how many
+          clients you can add — <B>Free</B> up to 3, <B>Pro</B> up to 10, <B>Enterprise</B> unlimited.
+        </p>
+      </Section>
+
+      <Section icon={Compass} title="Finding & managing clients">
+        <p>
+          The <B>Clients</B> tab lists everyone. Use the search box to filter by name, address, phone or email, and the{' '}
+          <B>Cards / Table</B> toggle to switch the layout. Each client card has quick actions:
+        </p>
+        <ul>
+          <li><B>Edit</B> (pencil) — change their details.</li>
+          <li><B>Invoice</B> (document) — email a styled invoice (a <B>Pro</B> feature — see below).</li>
+          <li><B>Log a job</B> (check) — record a finished visit.</li>
+          <li><B>Remove</B> (trash) — with an Undo button if you tap it by mistake.</li>
+        </ul>
+        <p>One-time clients appear in their own section and don't count toward your monthly projection.</p>
+      </Section>
+
+      <Section icon={Route} title="Planning your route">
+        <p>
+          The <B>Route</B> tab is your day's run. Add stops, drag to reorder them into the most efficient path, then tap
+          a stop to mark its job <B>done</B> — which logs the earnings in one move. You can also add a client to the
+          route automatically by ticking "Schedule first visit" when you add them.
+        </p>
+      </Section>
+
+      <Section icon={Receipt} title="Tracking expenses">
+        <p>
+          The <B>Expenses</B> tab is for business costs that aren't tied to one client — gas, blades, string, equipment,
+          etc. Add a description and amount; they're subtracted from your profit and factored into your margin and
+          markup. Tap the trash icon to remove one (with Undo).
+        </p>
+      </Section>
+
+      <Section icon={CheckCircle2} title="Logging completed jobs">
+        <p>
+          When you finish a visit, tap the <B>check</B> icon on that client's card (or mark the stop done on your{' '}
+          <B>Route</B>) and confirm the earnings, time, and expenses — it pre-fills from their profile, so usually you
+          just hit save. Logged jobs power your All-time stats, hourly rate, and the profit chart, so log them as you go.
         </p>
       </Section>
 
@@ -84,58 +126,66 @@ export function GuidePage({ onBack, onReplayTour }: GuidePageProps) {
           <li><B>Markup</B> — how much you make on top of your costs (profit ÷ expenses). 900% means $9 profit for every $1 spent.</li>
         </ul>
         <p>
-          Below that, the <B>monthly projection</B> estimates revenue and time based on each client's frequency, and
-          the charts show profit trends and revenue per client.
+          Below that, the <B>monthly projection</B> estimates revenue and time based on each client's frequency. The{' '}
+          <B>profit-trend</B> and <B>revenue-by-client</B> charts (the "Advanced analytics" of <B>Pro</B> and{' '}
+          <B>Enterprise</B>) show where your money is coming from over time.
         </p>
       </Section>
 
-      <Section icon={CheckCircle2} title="Logging completed jobs">
+      <Section icon={CalendarDays} title="Reminders">
         <p>
-          When you finish a visit, tap the <B>check</B> icon on that client's card and confirm the earnings, time, and
-          expenses (it pre-fills from their profile, so usually you just hit save). Logged jobs are what power your
-          All-time stats, hourly rate, and the profit chart — so log them as you go.
+          REST gives you a heads-up about 30 minutes before a scheduled visit. These are <B>on-device</B> reminders
+          (a pop-up notification on your phone, not an email) — allow notifications when asked so they can appear even
+          when the app is closed.
         </p>
       </Section>
 
-      <Section icon={Receipt} title="Tracking expenses">
+      <Section icon={FileText} title="Sending invoices (Pro & Enterprise)">
         <p>
-          On the <B>Clients</B> tab, the <B>Expenses</B> card is for business costs that aren't tied to one client —
-          gas, blades, string, equipment, etc. Add a description and amount; they're subtracted from your profit and
-          factored into your margin and markup. Tap the trash icon to remove one (with Undo).
+          Invoicing is part of <B>Pro</B> and <B>Enterprise</B>. Tap the <B>document</B> icon on a client to open an
+          invoice, fill in the amount, date, and service — the message is written for you — then either:
         </p>
-      </Section>
-
-      <Section icon={CalendarDays} title="Scheduling & reminders">
+        <ul>
+          <li><B>Send invoice</B> — emails a polished, styled invoice to your client on your behalf.</li>
+          <li><B>Open in email app</B> — hands off to your own email (Gmail, Mail, etc.) with everything pre-filled.</li>
+        </ul>
         <p>
-          Use the <B>Schedule</B> tab to book visits on the calendar, or tick <B>"Schedule first appointment"</B> when
-          adding a client. Upcoming visits appear right on the client's card. REST gives you a heads-up about 30
-          minutes before an appointment (allow notifications when asked for a pop-up reminder).
-        </p>
-      </Section>
-
-      <Section icon={FileText} title="Sending invoices">
-        <p>
-          Tap the <B>document</B> icon on a client to open an invoice. Fill in the amount, date, and service — the
-          message is written for you — then tap <B>Open in email app</B>. It hands off to your own email
-          (Gmail, Mail, etc.) with everything pre-filled, so you just press send. Nothing is sent until you do.
-        </p>
-        <p>
-          Set your <B>business name</B> and edit the <B>default message</B> once under <B>More → Invoices</B>.
+          Set your <B>business name</B>, accent colour, and the <B>default message</B> once under <B>More → Invoices</B>.
           Placeholders like <Code>{'{{client}}'}</Code> and <Code>{'{{amount}}'}</Code> fill in automatically.
+        </p>
+      </Section>
+
+      <Section icon={CloudSun} title="Local weather (optional)">
+        <p>
+          Under <B>More → Account</B> you can switch on <B>"Show weather on Home"</B>. It shows today's conditions and
+          high/low right on your Home tab — handy for planning outdoor work. It's <B>off by default</B>; turn it on and
+          either share your location or type a city. Switch between °C and °F any time.
+        </p>
+      </Section>
+
+      <Section icon={MessageCircle} title="Contact & feedback">
+        <p>
+          Got a question, a bug, or an idea? <B>More → Contact &amp; feedback</B> sends a message straight to me. Your
+          plan decides how fast I get to it — <B>Pro</B> is <B>Priority</B>, <B>Enterprise</B> is <B>Dedicated</B>.
         </p>
       </Section>
 
       <Section icon={CreditCard} title="Themes & plans">
         <p>
-          <B>More → Theme</B> switches between light/dark and six accent colours. <B>More → Plan</B> shows your
-          current plan and upgrade options (Free covers up to 3 clients; Pro and Enterprise are unlimited).
+          <B>More → Theme</B> switches between light/dark and six accent colours. <B>More → Plan</B> shows your current
+          plan and upgrade options:
         </p>
+        <ul>
+          <li><B>Free</B> — up to 3 clients, earnings & profit tracker, schedule, reminders.</li>
+          <li><B>Pro</B> — up to 10 clients, custom email invoices, advanced analytics, priority support.</li>
+          <li><B>Enterprise</B> — unlimited clients and dedicated support.</li>
+        </ul>
       </Section>
 
       <Section icon={Lightbulb} title="Tips & FAQ">
         <ul>
           <li><B>Margin vs. markup?</B> Margin is profit as a share of what you charged; markup is profit compared to what it cost you.</li>
-          <li><B>One-time customer?</B> Add them as a client with the <B>One-time</B> frequency — they show in your list but don't add to monthly projections.</li>
+          <li><B>One-time customer?</B> Add them with the <B>One-time</B> frequency — they show in your list but don't add to monthly projections.</li>
           <li><B>Will my data follow me?</B> Yes — everything is saved to your account, so it's there on any device when you sign in.</li>
           <li><B>Made a mistake deleting?</B> Most deletes show an <B>Undo</B> button for a few seconds.</li>
         </ul>
