@@ -70,7 +70,7 @@ export function ExpensesCard() {
             <input className={inputClass} placeholder="Gas, blades, string trimmer…" {...register('description')} />
             {errors.description && <p className="text-xs font-medium text-rose-600">{errors.description.message}</p>}
           </label>
-          <label className="space-y-1.5">
+          <label className="flex flex-col gap-1.5">
             <span className={labelClass}>Amount ($)</span>
             <input
               type="number"
