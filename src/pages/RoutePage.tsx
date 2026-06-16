@@ -103,12 +103,24 @@ export function RoutePage({
     () => new Set(routeStops.map((s) => s.completedJobId).filter((id): id is string => Boolean(id))),
     [routeStops],
   )
+  // The route stop each logged job came from — lets the Owed list show the
+  // scheduled route day (not the day it happened to be logged) and undo an
+  // entry that was logged by accident.
+  const stopByJobId = useMemo(() => {
+    const map = new Map<string, RouteStop>()
+    for (const s of routeStops) if (s.completedJobId) map.set(s.completedJobId, s)
+    return map
+  }, [routeStops])
   const owedJobs = useMemo(
     () =>
       completedJobs
         .filter((j) => !j.paid && routeJobIds.has(j.id))
-        .sort((a, b) => b.date.localeCompare(a.date)),
-    [completedJobs, routeJobIds],
+        .sort((a, b) => {
+          const da = stopByJobId.get(a.id)?.date ?? a.date
+          const db = stopByJobId.get(b.id)?.date ?? b.date
+          return db.localeCompare(da)
+        }),
+    [completedJobs, routeJobIds, stopByJobId],
   )
   const owedTotal = useMemo(() => owedJobs.reduce((sum, j) => sum + j.earnings, 0), [owedJobs])
 
@@ -133,6 +145,19 @@ export function RoutePage({
       toast.success('Marked paid')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not mark paid.')
+    }
+  }
+
+  // Undo an owed entry that was logged by accident: reopens the route stop
+  // (deletes the logged visit) so it drops off Owed and goes back to to-do.
+  const handleRemoveOwed = async (jobId: string) => {
+    const stop = stopByJobId.get(jobId)
+    if (!stop) return
+    try {
+      await reopenRouteStop(stop.id)
+      toast.success('Removed from owed')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not remove.')
     }
   }
 
@@ -338,7 +363,7 @@ export function RoutePage({
                     <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5 dark:border-amber-500/20 dark:bg-amber-500/10">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{job.clientName}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{job.date}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{stopByJobId.get(job.id)?.date ?? job.date}</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="tabular-nums text-sm font-semibold text-slate-900 dark:text-slate-100">{formatCurrency(job.earnings)}</span>
@@ -349,6 +374,15 @@ export function RoutePage({
                           style={{ backgroundColor: 'rgb(var(--color-primary))' }}
                         >
                           Paid
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleRemoveOwed(job.id)}
+                          aria-label="Remove from owed"
+                          title="Added by accident? Remove"
+                          className="rounded-lg p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:text-slate-500"
+                        >
+                          <X className="h-4 w-4" />
                         </button>
                       </div>
                     </div>

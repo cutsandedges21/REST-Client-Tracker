@@ -151,7 +151,7 @@ export function CompleteJobDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-40 overflow-y-auto bg-slate-950/35 backdrop-blur-sm"
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/35 backdrop-blur-sm"
         >
           <div className="flex min-h-full items-center justify-center p-4">
             <motion.div
@@ -312,8 +312,8 @@ export function CompleteJobDialog({
                     </button>
                     <button
                       type="submit"
-                      className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                      style={{ backgroundColor: 'var(--color-primary)' }}
+                      className="rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99]"
+                      style={{ backgroundColor: 'rgb(var(--color-primary))' }}
                     >
                       Save Job
                     </button>
