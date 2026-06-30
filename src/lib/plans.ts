@@ -39,7 +39,7 @@ export const PLANS: Plan[] = [
   {
     id: 'pro',
     name: 'Pro',
-    priceLabel: '$18/mo',
+    priceLabel: '$38/mo',
     tagline: 'For growing solo operators',
     benefits: [
       'Everything in Free',
@@ -57,7 +57,7 @@ export const PLANS: Plan[] = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    priceLabel: '$29/mo',
+    priceLabel: '$69/mo',
     tagline: 'For high-volume operators',
     benefits: ['Everything in Pro', 'Unlimited clients', 'Customizable UI'],
     clientLimit: null,
